@@ -151,26 +151,132 @@ Excluído explicitamente. Documentado para prevenir retorno do escopo.
 
 ## Traceability
 
-Preenchido durante a criação do roadmap.
+Cada requisito v1 mapeia para exatamente uma fase do `ROADMAP.md`.
 
+### Fundação e Conformidade
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 … FOUND-06 | Phase 1 | Pending |
-| LIMIT-01 … LIMIT-04 | Phase 1, Phase 3 | Pending |
-| PROTO-01 … PROTO-08 | Phase 2 | Pending |
-| CLOCK-01 … CLOCK-09 | Phase 3 | Pending |
-| LOG-01 … LOG-05 | Phase 2 | Pending |
+| FOUND-01 | Phase 1 | Pending |
+| FOUND-02 | Phase 1 | Pending |
+| FOUND-03 | Phase 1 | Pending |
+| FOUND-04 | Phase 1 | Pending |
+| FOUND-05 | Phase 1 | Pending |
+| FOUND-06 | Phase 1 | Pending |
+
+### Conformidade de Limites
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| LIMIT-01 | Phase 1 | Pending |
+| LIMIT-02 | Phase 3 | Pending |
+| LIMIT-03 | Phase 3 | Pending |
+| LIMIT-04 | Phase 1 | Pending |
+
+### Protocolo Falado e Tabuleiro
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| PROTO-01 | Phase 2 | Pending |
+| PROTO-02 | Phase 2 | Pending |
+| PROTO-03 | Phase 2 | Pending |
+| PROTO-04 | Phase 2 | Pending |
+| PROTO-05 | Phase 2 | Pending |
+| PROTO-06 | Phase 2 | Pending |
+| PROTO-07 | Phase 2 | Pending |
+| PROTO-08 | Phase 2 | Pending |
+
+### Relógio e Resiliência
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| CLOCK-01 | Phase 3 | Pending |
+| CLOCK-02 | Phase 3 | Pending |
+| CLOCK-03 | Phase 3 | Pending |
+| CLOCK-04 | Phase 3 | Pending |
+| CLOCK-05 | Phase 3 | Pending |
+| CLOCK-06 | Phase 3 | Pending |
+| CLOCK-07 | Phase 3 | Pending |
+| CLOCK-08 | Phase 3 | Pending |
+| CLOCK-09 | Phase 3 | Pending |
+
+### Log Obrigatório
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| LOG-01 | Phase 2 | Pending |
+| LOG-02 | Phase 2 | Pending |
+| LOG-03 | Phase 2 | Pending |
+| LOG-04 | Phase 2 | Pending |
+| LOG-05 | Phase 3 | Pending |
+
+### Checklist Pré-Jogo
+| Requirement | Phase | Status |
+|-------------|-------|--------|
 | CHECK-01 | Phase 3 | Pending |
-| TM-01 … TM-13 | Phase 4 | Pending |
-| AUTH-01 … AUTH-07 | Phase 4, Phase 7 | Pending |
-| PIPE-01 … PIPE-05 | Phase 6 | Pending |
-| OPS-01 … OPS-06 | Phase 6, Phase 7 | Pending |
+
+### Autoria — Gestão de Tempo
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| TM-01 | Phase 4 | Pending |
+| TM-02 | Phase 4 | Pending |
+| TM-03 | Phase 4 | Pending |
+| TM-04 | Phase 4 | Pending |
+| TM-05 | Phase 4 | Pending |
+| TM-06 | Phase 4 | Pending |
+| TM-07 | Phase 4 | Pending |
+| TM-08 | Phase 4 | Pending |
+| TM-09 | Phase 4 | Pending |
+| TM-10 | Phase 4 | Pending |
+| TM-11 | Phase 4 | Pending |
+| TM-12 | Phase 4 | Pending |
+| TM-13 | Phase 4 | Pending |
+
+### Defesa de Autoria
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| AUTH-01 | Phase 7 | Pending |
+| AUTH-02 | Phase 4 | Pending |
+| AUTH-03 | Phase 4 | Pending |
+| AUTH-04 | Phase 7 | Pending |
+| AUTH-05 | Phase 4 | Pending |
+| AUTH-06 | Phase 4 | Pending |
+| AUTH-07 | Phase 4 | Pending |
+
+### Pipeline Offline de IA
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| PIPE-01 | Phase 1 | Pending |
+| PIPE-02 | Phase 6 | Pending |
+| PIPE-03 | Phase 3 | Pending |
+| PIPE-04 | Phase 6 | Pending |
+| PIPE-05 | Phase 6 | Pending |
+
+### Prontidão Operacional
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| OPS-01 | Phase 7 | Pending |
+| OPS-02 | Phase 6 | Pending |
+| OPS-03 | Phase 7 | Pending |
+| OPS-04 | Phase 7 | Pending |
+| OPS-05 | Phase 7 | Pending |
+| OPS-06 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 58 total
-- Mapped to phases: 58
+- v1 requirements: 64 total (o número anterior de 58 omitia `OPS-01 … OPS-06`)
+- Mapped to phases: 64
 - Unmapped: 0 ✓
+- Duplicated across phases: 0 ✓
+- Phase 5 (Match Policy, Ponder & Calibration) é **condicional** e não possui requisito v1 — cortá-la não quebra cobertura, legalidade, sobrevivência nem a alegação de autoria.
+
+### Por fase
+
+| Phase | Requirements | Count |
+|-------|--------------|-------|
+| 1. Foundation, Provenance & Frozen Contract | FOUND-01…06, LIMIT-01, LIMIT-04, PIPE-01 | 9 |
+| 2. Console Protocol Spine | PROTO-01…08, LOG-01…04 | 12 |
+| 3. Clock Authority, Resilience & Rule-Ceiling Guards | CLOCK-01…09, LIMIT-02, LIMIT-03, LOG-05, CHECK-01, PIPE-03 | 14 |
+| 4. Authored Time Manager | TM-01…13, AUTH-02, AUTH-03, AUTH-05, AUTH-06, AUTH-07 | 18 |
+| 5. Match Policy, Ponder & Calibration (conditional) | — | 0 |
+| 6. Adversarial Verification & Dress Rehearsal | PIPE-02, PIPE-04, PIPE-05, OPS-02, OPS-06 | 5 |
+| 7. Game-Day Operations & Authorship Defense | AUTH-01, AUTH-04, OPS-01, OPS-03, OPS-04, OPS-05 | 6 |
+| **Total** | | **64** |
 
 ---
 *Requirements defined: 2026-10-26*
-*Last updated: 2026-10-26 after initial definition*
+*Last updated: 2026-10-26 after roadmap creation (traceability expanded per requirement)*
