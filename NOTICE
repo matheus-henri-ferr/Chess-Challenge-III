@@ -7,7 +7,7 @@ Base commit date:             2026-09-05
 Fork date:                    2026-10-26
 Fork repository:              https://github.com/matheus-henri-ferr/Chess-Challenge-III
 License:                      GPL-3.0-or-later (see Copying.txt)
-Project commit (this build):  a84a87d77eaab7ad3ceabcab7f059cfb0f2a89bf
+Project commit (this build):  273af4f1ddcf03cba1d15127e40f9a9855e603a9
 Build command:                make -C src -j12 build
 Build profile:                build
 ARCH:                         x86-64-avxvnni
@@ -52,9 +52,10 @@ authored by the team (see PROVENANCE.md). The Rule 2 authorship component lives 
 `src/timeman.*` (Phase 4): see `docs/timeman/` and AUTHORSHIP.md when they exist.
 
 Binary sha256 and Project commit come from evidence/01-offline-build.log: the
-namespace-severed (`unshare -rn`) fresh-clone build at commit a84a87d7
- reproduced 2,497,913 nodes and a byte-identical binary (077d3601…), and the
-working tree was rebuilt clean at the same commit to the same hash. A
+namespace-severed (`unshare -rn`) fresh-clone build reproduced 2,497,913 nodes
+and a byte-identical binary (077d3601…), and the working tree was rebuilt clean
+at the same commit to the same hash. The named commit is the HEAD of the last
+committed evidence run; later doc-only commits do not change the binary. A
 `profile-build` of the same tree produces a different hash with identical
 bench nodes; if the shipped binary is a profile-build, record its own hash
 and profile here.
