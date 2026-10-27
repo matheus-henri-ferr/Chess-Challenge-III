@@ -64,12 +64,12 @@ Plans:
   3. The ANNOUNCE field stays blank until `bestmove` arrives, then shows exactly the engine's move in uppercase hyphenated form (`E2-E4`, `E7-E8=Q`); a PV that deepens on screen never leaks into it.
   4. A ponder miss — `stop` followed by a late `bestmove` for the speculative position — produces no move on the board, no state change and a `STALE_BESTMOVE` journal record, with the test written before the handler.
   5. After a full game against stock Stockfish, `log_lint` reports zero missing fields, including opponent half-moves and terminal moves.
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans executed
 
 Plans:
 - [x] 02-01: Thirty-minute wire-format spike on the built binary (`info`, `info string`, `bestmove (none)`, `CRITICAL ERROR` on illegal `position`), then the ~250-line UCI transport: framing, whitelisted line parsing, monotonic `search_id`, `discarding` flag, stderr drain, and an option queue applied at `IDLE` (never mid-ponder)
 - [x] 02-02: Strict UCI parser with typed rejects; board replica + legality gate in both directions; explicit `IDLE → OUR_SEARCH → ANNOUNCE_PENDING → AWAIT_OPP_CONFIRM → OPP_TURN/PONDERING` machine with side-to-move guard; keyboard-only operator loop with instant echo; ANNOUNCE locked to `bestmove`; resync-by-replaying-last-N-moves; `test_ponder_discard.py` first
-- [ ] 02-03: Append-only `fsync` journal + `MoveLog` projection (eight fields for every half-move, `src=ponder|book`, `d=0 n=0`, `engine_ms` and `wall_ms`, bound flags verbatim) + `log_lint`; full game against stock Stockfish
+- [x] 02-03: Append-only `fsync` journal + `MoveLog` projection (eight fields for every half-move, `src=ponder|book`, `d=0 n=0`, `engine_ms` and `wall_ms`, bound flags verbatim) + `log_lint`; full game against stock Stockfish
 
 **Why this phase**: The console is the critical path — nothing is end-to-end verifiable without it, and it sits on one person. This phase builds its spine, and everything later attaches to it. The time-manager owner must not wait for it: that track codes against `mock_gui.py` from day 1.
 
@@ -354,7 +354,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → (5, conditional) → 6 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation, Provenance & Frozen Contract | 0/3 | Not started | - |
-| 2. Console Protocol Spine | 2/3 | In Progress | - |
+| 2. Console Protocol Spine | 3/3 | In Progress | - |
 | 3. Clock Authority, Resilience & Rule-Ceiling Guards | 0/3 | Not started | - |
 | 4. Authored Time Manager | 0/3 | Not started | - |
 | 5. Match Policy, Ponder & Calibration (conditional) | 0/3 | Not started | - |
