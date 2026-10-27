@@ -1,0 +1,26 @@
+# invocation: BASE=./src/stockfish CUSTOM=./src/stockfish ROUNDS=2 CONCURRENCY=4
+# date: 2026-10-27T13:08:46Z
+# commit: 3fa911f56ceccca2b828568e43e740da2385b428
+# base sha256:   795056df4461712fdcf10b5da4b95bd0e3d235251665fd9a1fb39f65b4e0b294  ./src/stockfish
+# custom sha256: 795056df4461712fdcf10b5da4b95bd0e3d235251665fd9a1fb39f65b4e0b294  ./src/stockfish
+# book sha256:   7a7f6470615a69c6cf23d565417701d38732876f480af90d67b42abade35644a  tools/books/UHO_Lichess_4852_v1.epd
+Indexing opening suite...
+Started game 1 of 4 (base vs custom)
+Started game 2 of 4 (custom vs base)
+Started game 3 of 4 (base vs custom)
+Started game 4 of 4 (custom vs base)
+Finished game 1 (base vs custom): 1/2-1/2 {Draw by 3-fold repetition}
+Finished game 4 (custom vs base): 1-0 {White mates}
+Finished game 2 (custom vs base): 1-0 {White mates}
+Finished game 3 (base vs custom): 1-0 {White mates}
+--------------------------------------------------
+Results of base vs custom (10+0.1, 1t, 16MB, UHO_Lichess_4852_v1.epd):
+Elo: -88.74 +/- 136.27, nElo: -245.67 +/- 340.48
+LOS: 7.86 %, DrawRatio: 50.00 %, PairsRatio: 0.00
+Games: 4, Wins: 1, Losses: 2, Draws: 1, Points: 1.5 (37.50 %)
+Ptnml(0-2): [0, 1, 1, 0, 0], WL/DD Ratio: inf
+LLR: -0.02 (-0.7%) (-2.94, 2.94) [0.00, 5.00]
+--------------------------------------------------
+Finished match
+Total Time: 00:00:38 (hours:minutes:seconds)
+

@@ -48,9 +48,10 @@ engine itself refuses a directory containing a 6-man file (exit 1,
 |---|---|---|---|---|---|---|
 | python-chess (`chess`) | 1.11.2 | vendored at `vendor/chess/` (no resolver; sdist verified then tree-pinned in `vendor/chess/SHA256SUMS`) | sdist a8b43e5678fdb3000695bdaa573117ad683761e5ca38e591c4826eba6d25bb39 | GPL-3.0-or-later | yes | board replica, UCI client, Polyglot, Syzygy probing (console/tooling) |
 | fastchess | 1.8.2-alpha (20260726-f618e34) | prebuilt release binary + MIT source at `tools/fastchess-linux-x86-64/` (dev-only) | tarball 1003f920bebe841acdab5e6d7871e93171a4586857b3ec91c21ef5777f26ff96 | MIT | no | SPRT / match runner (development only, never inside the engine tree) |
+| UHO_Lichess_4852_v1.epd | official-stockfish/books (16 plies) | pinned in `tools/books/SHA256SUMS` (sourced from `UHO_Lichess_4852_v1.epd.zip` in the same repo) | 7a7f6470615a69c6cf23d565417701d38732876f480af90d67b42abade35644a | CC0-1.0 | no | SPRT openings (harness only — the competition book is separate, Rule 3) |
 | GCC / libstdc++ | 16.2.1 | system toolchain | n/a | GPL-3.0-or-later with GCC Runtime Library Exception | n/a | build only |
 | Python | 3.14.7 | system interpreter (stdlib only for Phase-1 tooling; `chess` vendored, never pip-installed) | n/a | PSF-2.0 | n/a | console + tooling |
-| Openings books (harness) | official-stockfish/books | downloaded pre-event into `tools/books/` (01-03) | recorded in `tools/books/SHA256SUMS` (01-03) | CC0-1.0 | no | SPRT openings |
+| Openings books (harness) | official-stockfish/books | downloaded pre-event into `tools/books/`; see the UHO_Lichess_4852_v1.epd row above | recorded in `tools/books/SHA256SUMS` | CC0-1.0 | no | SPRT openings |
 | Syzygy 3-4-5 | 2026-08 snapshot (pending fetch) | downloaded pre-event; hash manifest at the tablebase root | (see §2.1) | probe code GPLv3 (src/syzygy/); data unrestricted | yes (media) | endgame play-off |
 
 ## 4. Not authored by the team
