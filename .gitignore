@@ -23,3 +23,6 @@ tsan.supp
 __pycache__/
 tests/syzygy
 tests/bench_tmp.epd
+
+# GSD orchestrator worktrees + worker logs (ephemeral)
+.claude/

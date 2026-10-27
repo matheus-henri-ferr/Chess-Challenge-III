@@ -235,3 +235,117 @@
 {"t": 4444699895741, "dir": "in", "line": "position startpos moves z9z9"}
 {"t": 4444699903252, "dir": "out", "line": "info string CRITICAL ERROR"}
 {"t": 4444711886572, "dir": "in", "line": "quit"}
+{"t": 4795878309066, "dir": "in", "line": "uci"}
+{"t": 4795881500117, "dir": "out", "line": "Stockfish 19 by the Stockfish developers (see AUTHORS file)"}
+{"t": 4796678184841, "dir": "out", "line": "id name Stockfish 19"}
+{"t": 4796678344309, "dir": "out", "line": "id author the Stockfish developers (see AUTHORS file)"}
+{"t": 4796678392127, "dir": "out", "line": "option name Debug Log File type string default <empty>"}
+{"t": 4796678426243, "dir": "out", "line": "option name NumaPolicy type string default auto"}
+{"t": 4796678451809, "dir": "out", "line": "option name Threads type spin default 1 min 1 max 1024"}
+{"t": 4796678477208, "dir": "out", "line": "option name Hash type spin default 16 min 1 max 33554432"}
+{"t": 4796678498832, "dir": "out", "line": "option name Clear Hash type button"}
+{"t": 4796678525172, "dir": "out", "line": "option name Ponder type check default false"}
+{"t": 4796678544716, "dir": "out", "line": "option name MultiPV type spin default 1 min 1 max 256"}
+{"t": 4796678798352, "dir": "out", "line": "option name Skill Level type spin default 20 min 0 max 20"}
+{"t": 4796679073213, "dir": "out", "line": "option name Move Overhead type spin default 10 min 0 max 5000"}
+{"t": 4796679181800, "dir": "out", "line": "option name nodestime type spin default 0 min 0 max 10000"}
+{"t": 4796679216822, "dir": "out", "line": "option name UCI_Chess960 type check default false"}
+{"t": 4796679242217, "dir": "out", "line": "option name UCI_LimitStrength type check default false"}
+{"t": 4796679264238, "dir": "out", "line": "option name UCI_Elo type spin default 1320 min 1320 max 3190"}
+{"t": 4796679285941, "dir": "out", "line": "option name UCI_ShowWDL type check default false"}
+{"t": 4796679317233, "dir": "out", "line": "option name SyzygyPath type string default <empty>"}
+{"t": 4796679336022, "dir": "out", "line": "option name SyzygyProbeDepth type spin default 1 min 1 max 100"}
+{"t": 4796679356101, "dir": "out", "line": "option name Syzygy50MoveRule type check default true"}
+{"t": 4796679376430, "dir": "out", "line": "option name SyzygyProbeLimit type spin default 5 min 0 max 5"}
+{"t": 4796679398479, "dir": "out", "line": "option name EvalFile type string default nn-1a298aa575a0.nnue"}
+{"t": 4796679422686, "dir": "out", "line": "uciok"}
+{"t": 4796679554072, "dir": "in", "line": "isready"}
+{"t": 4796679871075, "dir": "out", "line": "readyok"}
+{"t": 4796680022260, "dir": "in", "line": "position startpos moves e2e4"}
+{"t": 4796680100003, "dir": "in", "line": "go wtime 600000 btime 600000 winc 10000 binc 10000"}
+{"t": 4796680603151, "dir": "out", "line": "info string Available processors: 0-11"}
+{"t": 4796680669568, "dir": "out", "line": "info string Using 1 thread"}
+{"t": 4796680716294, "dir": "out", "line": "info string NNUE evaluation using nn-1a298aa575a0.nnue (109MiB, (86896, 1024, 32, 32, 1))"}
+{"t": 4796680752113, "dir": "out", "line": "info string Network replica 1: Shared memory."}
+{"t": 4796680787832, "dir": "out", "line": "info string TB ceiling OK: SyzygyProbeLimit=5 max_loaded=0"}
+{"t": 4796681096680, "dir": "out", "line": "info depth 1 seldepth 2 multipv 1 score cp -12 nodes 22 nps 22000 hashfull 0 tbhits 0 time 1 pv e7e5"}
+{"t": 4796681231906, "dir": "out", "line": "info depth 2 seldepth 3 multipv 1 score cp -2 nodes 48 nps 48000 hashfull 0 tbhits 0 time 1 pv e7e5"}
+{"t": 4796683343026, "dir": "out", "line": "info depth 3 seldepth 5 multipv 1 score cp -18 nodes 585 nps 195000 hashfull 0 tbhits 0 time 3 pv c7c5 g1f3 b8c6 f1c4"}
+{"t": 4796683637427, "dir": "out", "line": "info depth 4 seldepth 5 multipv 1 score cp -18 nodes 702 nps 234000 hashfull 0 tbhits 0 time 3 pv c7c5 g1f3 b8c6 f1c4"}
+{"t": 4796685070533, "dir": "out", "line": "info depth 5 seldepth 8 multipv 1 score cp -19 nodes 1046 nps 261500 hashfull 0 tbhits 0 time 4 pv c7c5 g1f3 b8c6 b1c3 d7d6"}
+{"t": 4796690936457, "dir": "out", "line": "info depth 6 seldepth 10 multipv 1 score cp -24 nodes 2612 nps 261200 hashfull 0 tbhits 0 time 10 pv e7e5 g1f3 b8c6 d2d4 e5d4 f3d4 f8c5 d4c6 b7c6"}
+{"t": 4796695540300, "dir": "out", "line": "info depth 7 seldepth 11 multipv 1 score cp -25 nodes 3891 nps 259400 hashfull 0 tbhits 0 time 15 pv e7e5 g1f3 b8c6 b1c3"}
+{"t": 4796697909690, "dir": "out", "line": "info depth 8 seldepth 12 multipv 1 score cp -28 nodes 4498 nps 264588 hashfull 1 tbhits 0 time 17 pv e7e5 g1f3 b8c6 b1c3 g8f6 f1b5 c6d4 f3e5"}
+{"t": 4796720436727, "dir": "out", "line": "info depth 9 seldepth 13 multipv 1 score cp -32 nodes 9746 nps 243650 hashfull 2 tbhits 0 time 40 pv c7c5 g1f3 b8c6 b1c3 g8f6 d2d4 c5d4 f3d4 e7e6"}
+{"t": 4796747979118, "dir": "out", "line": "info depth 10 seldepth 13 multipv 1 score cp -30 nodes 16228 nps 242208 hashfull 4 tbhits 0 time 67 pv c7c5 g1f3 b8c6 f1b5"}
+{"t": 4796767779914, "dir": "out", "line": "info depth 11 seldepth 17 multipv 1 score cp -30 nodes 20768 nps 238712 hashfull 5 tbhits 0 time 87 pv c7c5 g1f3 b8c6 f1b5 g8f6 b1c3 c6d4 e4e5 d4b5 c3b5"}
+{"t": 4796777088780, "dir": "out", "line": "info depth 12 seldepth 15 multipv 1 score cp -31 nodes 22841 nps 237927 hashfull 5 tbhits 0 time 96 pv c7c5 g1f3 b8c6 f1b5 g8f6 b5c6 b7c6 e4e5 f6d5 h2h3 d5c7"}
+{"t": 4796945927463, "dir": "out", "line": "info depth 13 seldepth 23 multipv 1 score cp -25 nodes 59048 nps 222822 hashfull 19 tbhits 0 time 265 pv c7c5 g1f3 d7d6 f1b5 c8d7 b5d7 d8d7 e1g1 b8c6 c2c3 g8f6"}
+{"t": 4797156228790, "dir": "out", "line": "info depth 14 seldepth 25 multipv 1 score cp -31 nodes 103508 nps 217911 hashfull 33 tbhits 0 time 475 pv e7e5 g1f3 g8f6 b1c3 b8c6 f1b5 f8b4 b5c6 d7c6 f3e5 e8g8"}
+{"t": 4797257227160, "dir": "out", "line": "info depth 15 seldepth 27 multipv 1 score cp -34 nodes 125952 nps 218666 hashfull 41 tbhits 0 time 576 pv e7e5 g1f3 b8c6 f1b5 a7a6 b5a4 g8f6 e1g1 f6e4 d2d4 e5d4 f1e1 d7d5 f3d4 f8c5 c1e3 c5d4 a4c6 b7c6 d1d4"}
+{"t": 4797630612110, "dir": "out", "line": "info depth 16 seldepth 25 multipv 1 score cp -32 nodes 208719 nps 219704 hashfull 69 tbhits 0 time 950 pv c7c5 g1f3 d7d6 d2d4 c5d4 f3d4 g8f6 b1c3 a7a6 c1g5 e7e6 d1d2 h7h6 g5f6 d8f6 f1c4"}
+{"t": 4797751865757, "dir": "out", "line": "info depth 17 seldepth 27 multipv 1 score cp -37 nodes 235847 nps 220211 hashfull 77 tbhits 0 time 1071 pv c7c5 g1f3 d7d6 d2d4 g8f6 b1c3 c5d4 f3d4 a7a6 c1g5 e7e6 d1e2"}
+{"t": 4797988834658, "dir": "out", "line": "info depth 18 seldepth 24 multipv 1 score cp -32 nodes 282506 nps 215983 hashfull 91 tbhits 0 time 1308 pv e7e5 g1f3 b8c6 f1b5 g8f6 e1g1 f6e4 f1e1 e4d6 f3e5 f8e7 b5f1 d6f5 b1c3"}
+{"t": 4798956398866, "dir": "out", "line": "info depth 19 seldepth 33 multipv 1 score cp -13 nodes 454779 nps 199990 hashfull 147 tbhits 0 time 2274 pv e7e5 g1f3 b8c6 f1b5 g8f6 e1g1 f6e4 f1e1 e4d6 f3e5 f8e7 b5f1 c6e5 e1e5 e8g8 b1c3 e7f6 e5e1 f8e8 c3d5 e8e1 d1e1 b7b6 d5f6 d8f6 d2d3 c8b7 e1d2"}
+{"t": 4799776359388, "dir": "out", "line": "info depth 20 seldepth 38 multipv 1 score cp -26 nodes 596952 nps 192876 hashfull 203 tbhits 0 time 3095 pv e7e5 g1f3 b8c6 f1b5 g8f6 e1g1 f6e4 f1e1 e4d6 f3e5 f8e7 b5f1 c6e5 e1e5 e8g8 d2d4 e7f6 e5e1 f8e8 c1f4 e8e1 d1e1 d6e8 e1b4 d7d5 b1d2 f6e7 b4a5 g7g5 f4g3 c7c6 a5d8 e7d8"}
+{"t": 4800423592818, "dir": "out", "line": "info depth 21 seldepth 40 multipv 1 score cp -23 nodes 709032 nps 189428 hashfull 248 tbhits 0 time 3743 pv e7e5 g1f3 b8c6 f1b5 g8f6 e1g1 f6e4 f1e1 e4d6 f3e5 c6e5 e1e5 f8e7 b5f1 e8g8 b1c3 d6e8 c3d5 e7d6 e5e1 g8h8"}
+{"t": 4802199407425, "dir": "out", "line": "info depth 22 seldepth 40 multipv 1 score cp -19 nodes 1043321 nps 189075 hashfull 363 tbhits 0 time 5518 pv e7e5 g1f3 b8c6 f1b5 g8f6 e1g1 f6e4 f1e1 e4d6 f3e5 c6e5 e1e5 f8e7 b5f1 e8g8 b1c3 d6e8 c3d5 e7d6 e5e1 d8h4"}
+{"t": 4802778495173, "dir": "out", "line": "info depth 23 seldepth 40 multipv 1 score cp -20 nodes 1172946 nps 192349 hashfull 413 tbhits 0 time 6098 pv e7e5 g1f3 b8c6 f1b5 g8f6 e1g1 f6e4 f1e1 e4d6 f3e5 c6e5 e1e5 f8e7 b5f1 e8g8 b1c3 d6e8 c3d5 e7d6 e5e1 c7c6 d5e3 d6c7 e3f5 e8f6 f5e7 g8h8 e7c8 d8c8 c2c3 f8e8 e1e8 c8e8"}
+{"t": 4805261213734, "dir": "out", "line": "info depth 24 seldepth 43 multipv 1 score cp -22 nodes 1669644 nps 194597 hashfull 543 tbhits 0 time 8580 pv e7e5 g1f3 b8c6 f1b5 g8f6 e1g1 f6e4 f1e1 e4d6 f3e5 f8e7 b5f1 c6e5 e1e5 e8g8 d2d4 d6e8 c2c4 e7f6 e5e1 d7d5 c4d5 d8d5 c1e3 c8e6 b1c3 d5d7 a1c1 e6f5 d4d5"}
+{"t": 4806960663689, "dir": "out", "line": "info depth 25 seldepth 42 multipv 1 score cp -23 nodes 1969626 nps 191597 hashfull 611 tbhits 0 time 10280 pv e7e5 g1f3 b8c6 f1b5 g8f6 e1g1 f6e4 f1e1 e4d6 f3e5 f8e7 b5f1 c6e5 e1e5 e8g8 d2d4 e7f6 e5e1 f8e8 c1f4 e8e1 d1e1 d6e8 c2c3 d7d5 e1e3"}
+{"t": 4807579741743, "dir": "out", "line": "info depth 26 seldepth 44 multipv 1 score cp -22 nodes 2085225 nps 191322 hashfull 635 tbhits 0 time 10899 pv e7e5 g1f3 b8c6 f1b5 g8f6 e1g1 f6e4 f1e1 e4d6 f3e5 c6e5 b5f1 f8e7 e1e5 e8g8 d2d4 e7f6 e5e1 f8e8 c1f4 e8e1 d1e1 d6e8 c2c3 d7d5 a2a4 c8e6"}
+{"t": 4809270206029, "dir": "out", "line": "info depth 27 seldepth 39 multipv 1 score cp -24 nodes 2382543 nps 189255 hashfull 689 tbhits 0 time 12589 pv e7e5 g1f3 b8c6 f1b5 g8f6 e1g1 f6e4 f1e1 e4d6 f3e5 c6e5 e1e5 f8e7 b5f1 e8g8 d2d4 e7f6 e5e1 d6f5 d4d5 d7d6 b1c3 c8d7 c3e4 f6e5 c2c3 h7h6 f2f4"}
+{"t": 4811690063608, "dir": "out", "line": "info depth 28 seldepth 44 multipv 1 score cp -26 nodes 2863787 nps 190804 hashfull 766 tbhits 0 time 15009 pv e7e5 g1f3 b8c6 f1b5 g8f6 e1g1 f6e4 f1e1 e4d6 f3e5 c6e5 e1e5 f8e7 b5f1 e8g8 d2d4 e7f6 e5e1 f8e8 c1f4 e8e1 d1e1 d6e8 c2c3 d7d5 b1d2 c8f5 h2h3 f6g5 f4h2 c7c6 e1e5"}
+{"t": 4814145378983, "dir": "out", "line": "info depth 29 seldepth 47 multipv 1 score cp -18 nodes 3352829 nps 191974 hashfull 829 tbhits 0 time 17465 pv e7e5 g1f3 b8c6 f1b5 g8f6 e1g1 f6e4 f1e1 e4d6 f3e5 c6e5 e1e5 f8e7 b5f1 e8g8 d2d4 e7f6 e5e1 f8e8 c1f4 e8e1 d1e1 d6e8 c2c3 d7d5 h2h3 e8d6 b1d2 h7h6 e1d1 c7c6 a2a4 a7a5 d2f3 c8f5"}
+{"t": 4817549945443, "dir": "out", "line": "info depth 30 seldepth 51 multipv 1 score cp -18 nodes 3996295 nps 191494 hashfull 888 tbhits 0 time 20869 pv e7e5 g1f3 b8c6 f1b5 g8f6 e1g1 f6e4 f1e1 e4d6 f3e5 c6e5 e1e5 f8e7 b5f1 e8g8 d2d4 e7f6 e5e1 f8e8 c1f4 e8e1 d1e1 d6e8 c2c3 d7d5 b1d2 a7a5 e1e3 h7h6"}
+{"t": 4826666695245, "dir": "out", "line": "info depth 31 seldepth 54 multipv 1 score cp -18 nodes 5696055 nps 189957 hashfull 965 tbhits 0 time 29986 pv e7e5 g1f3 b8c6 f1b5 g8f6 e1g1 f6e4 f1e1 e4d6 f3e5 c6e5 e1e5 f8e7 b5f1 e8g8 d2d4 e7f6 e5e1 f8e8 c1f4 e8e1 d1e1 d6e8 c2c3 c7c6 h2h3 d7d5 b1d2 c8f5 a2a4 e8c7 a4a5 c7e6 f4h2"}
+{"t": 4829627807736, "dir": "out", "line": "info depth 32 seldepth 42 multipv 1 score cp -17 nodes 6225711 nps 188961 hashfull 977 tbhits 0 time 32947 pv e7e5 g1f3 b8c6 f1b5 g8f6 e1g1 f6e4 f1e1 e4d6 f3e5 c6e5 e1e5 f8e7 b5f1 e8g8 d2d4 e7f6 e5e1 f8e8 c1f4 e8e1 d1e1 d6e8 c2c3 c7c6 h2h3 d7d5 b1d2 c8f5 e1e3 h7h6 a1e1 e8d6 d2b3 f6h4 b3c5"}
+{"t": 4835490918884, "dir": "out", "line": "info depth 33 seldepth 49 multipv 1 score cp -20 nodes 7350779 nps 189404 hashfull 989 tbhits 0 time 38810 pv e7e5 g1f3 b8c6 f1b5 g8f6 e1g1 f6e4 f1e1 e4d6 f3e5 c6e5 e1e5 f8e7 b5f1 e8g8 d2d4 e7f6 e5e1 f8e8 c1f4 e8e1 d1e1 d6e8 c2c3 d7d5 b1d2 c7c6 a2a4 a7a5 h2h3 c8f5 d2b3 f5g6 e1e3"}
+{"t": 4835491171674, "dir": "out", "line": "bestmove e7e5 ponder g1f3"}
+{"t": 4836506809213, "dir": "in", "line": "position startpos moves e2e4 e7e5"}
+{"t": 4836506961673, "dir": "in", "line": "go wtime 600000 btime 600000 winc 10000 binc 10000"}
+{"t": 4836507733789, "dir": "out", "line": "info string Available processors: 0-11"}
+{"t": 4836507897756, "dir": "out", "line": "info string Using 1 thread"}
+{"t": 4836507967850, "dir": "out", "line": "info string NNUE evaluation using nn-1a298aa575a0.nnue (109MiB, (86896, 1024, 32, 32, 1))"}
+{"t": 4836508009428, "dir": "out", "line": "info string Network replica 1: Shared memory."}
+{"t": 4836508104378, "dir": "in", "line": "stop"}
+{"t": 4836508326511, "dir": "out", "line": "info string TB ceiling OK: SyzygyProbeLimit=5 max_loaded=0"}
+{"t": 4836508899914, "dir": "out", "line": "info depth 1 seldepth 4 multipv 1 score cp 20 nodes 32 nps 32000 hashfull 0 tbhits 0 time 1 pv g1f3"}
+{"t": 4836509035975, "dir": "out", "line": "info depth 2 seldepth 3 multipv 1 score cp 20 nodes 67 nps 67000 hashfull 0 tbhits 0 time 1 pv g1f3 b8c6"}
+{"t": 4836509097581, "dir": "out", "line": "info depth 3 seldepth 4 multipv 1 score cp 20 nodes 105 nps 105000 hashfull 0 tbhits 0 time 1 pv g1f3 b8c6 f1b5"}
+{"t": 4836509252335, "dir": "out", "line": "info depth 4 seldepth 5 multipv 1 score cp 20 nodes 150 nps 150000 hashfull 0 tbhits 0 time 1 pv g1f3 b8c6 d2d4"}
+{"t": 4836509298052, "dir": "out", "line": "info depth 5 seldepth 20 multipv 1 score cp 20 nodes 236 nps 236000 hashfull 0 tbhits 0 time 1 pv g1f3 b8c6 d2d4 e5d4 f3d4 g8f6 b1c3"}
+{"t": 4836509342536, "dir": "out", "line": "info depth 6 seldepth 8 multipv 1 score cp 20 nodes 287 nps 287000 hashfull 0 tbhits 0 time 1 pv g1f3 b8c6 d2d4 e5d4 f3d4 g8f6"}
+{"t": 4836509391962, "dir": "out", "line": "info depth 7 seldepth 8 multipv 1 score cp 20 nodes 296 nps 296000 hashfull 0 tbhits 0 time 1 pv g1f3 b8c6 d2d4 e5d4 f3d4 g8f6"}
+{"t": 4836509430187, "dir": "out", "line": "bestmove g1f3 ponder b8c6"}
+{"t": 4837727620760, "dir": "out", "line": "out> info depth 0 score mate 0"}
+{"t": 4837727675902, "dir": "out", "line": "out> bestmove (none)"}
+{"t": 4838598838441, "dir": "in", "line": "uci"}
+{"t": 4838598892171, "dir": "out", "line": "Stockfish 19 by the Stockfish developers (see AUTHORS file)"}
+{"t": 4838598926988, "dir": "out", "line": "id name Stockfish 19"}
+{"t": 4838598943702, "dir": "out", "line": "id author the Stockfish developers (see AUTHORS file)"}
+{"t": 4838598954756, "dir": "out", "line": "option name Debug Log File type string default <empty>"}
+{"t": 4838598964778, "dir": "out", "line": "option name NumaPolicy type string default auto"}
+{"t": 4838598973476, "dir": "out", "line": "option name Threads type spin default 1 min 1 max 1024"}
+{"t": 4838598982103, "dir": "out", "line": "option name Hash type spin default 16 min 1 max 33554432"}
+{"t": 4838598990744, "dir": "out", "line": "option name Clear Hash type button"}
+{"t": 4838598999842, "dir": "out", "line": "option name Ponder type check default false"}
+{"t": 4838599008256, "dir": "out", "line": "option name MultiPV type spin default 1 min 1 max 256"}
+{"t": 4838599016459, "dir": "out", "line": "option name Skill Level type spin default 20 min 0 max 20"}
+{"t": 4838599024845, "dir": "out", "line": "option name Move Overhead type spin default 10 min 0 max 5000"}
+{"t": 4838599033120, "dir": "out", "line": "option name nodestime type spin default 0 min 0 max 10000"}
+{"t": 4838599041611, "dir": "out", "line": "option name UCI_Chess960 type check default false"}
+{"t": 4838599050131, "dir": "out", "line": "option name UCI_LimitStrength type check default false"}
+{"t": 4838599058622, "dir": "out", "line": "option name UCI_Elo type spin default 1320 min 1320 max 3190"}
+{"t": 4838599067645, "dir": "out", "line": "option name UCI_ShowWDL type check default false"}
+{"t": 4838599076050, "dir": "out", "line": "option name SyzygyPath type string default <empty>"}
+{"t": 4838599084595, "dir": "out", "line": "option name SyzygyProbeDepth type spin default 1 min 1 max 100"}
+{"t": 4838599093254, "dir": "out", "line": "option name Syzygy50MoveRule type check default true"}
+{"t": 4838599101673, "dir": "out", "line": "option name SyzygyProbeLimit type spin default 5 min 0 max 5"}
+{"t": 4838599109680, "dir": "out", "line": "option name EvalFile type string default nn-1a298aa575a0.nnue"}
+{"t": 4838599118608, "dir": "out", "line": "uciok"}
+{"t": 4838599127404, "dir": "in", "line": "isready"}
+{"t": 4838599136001, "dir": "out", "line": "readyok"}
+{"t": 4838599144938, "dir": "in", "line": "position startpos moves z9z9"}
+{"t": 4838599153597, "dir": "out", "line": "info string CRITICAL ERROR"}
+{"t": 4838615208151, "dir": "in", "line": "quit"}
