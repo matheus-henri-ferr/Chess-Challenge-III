@@ -14,7 +14,7 @@ ARCH:                         x86-64-avxvnni
 Compiler:                     g++ (GNUC) 16.2.1 on Linux
 Compilation settings:         64bit VNNI BMI2 AVX2 SSE41 SSSE3 SSE2 POPCNT
 Bench nodes:                  2497913
-Binary sha256:                077d3601b503c369f97ed06df73cd5f3b44fd3d3fa513e31c92065da992c4a79
+Binary sha256:                795056df4461712fdcf10b5da4b95bd0e3d235251665fd9a1fb39f65b4e0b294
 NNUE net:                     nn-1a298aa575a0.nnue
 NNUE net sha256:              1a298aa575a085434d29027978dc36867fe9c5bcea9376654b7a8eba1e52dfc2
 Modified files:
@@ -53,11 +53,13 @@ authored by the team (see PROVENANCE.md). The Rule 2 authorship component lives 
 
 Binary sha256 and Project commit come from evidence/01-offline-build.log: the
 namespace-severed (`unshare -rn`) fresh-clone build reproduced 2,497,913 nodes
-and a byte-identical binary (077d3601…), and the working tree was rebuilt clean
-at the same commit to the same hash. The named commit is the HEAD of the last
-committed evidence run; later doc-only commits do not change the binary. A
-`profile-build` of the same tree produces a different hash with identical
-bench nodes; if the shipped binary is a profile-build, record its own hash
-and profile here.
+and a byte-identical binary, and the working tree was rebuilt clean at the same
+commit to the same hash. The named commit is the HEAD of the last committed
+evidence run; later doc-only commits do not change the binary. History: the
+stock (unmodified sf_19) binary hashed 077d3601… and is archived in
+RELEASE/stock-binary/ with its own SHA256SUMS; the TB-ceiling guard (01-03)
+changed the hash to the value above with bench unchanged. A `profile-build` of
+the same tree produces a different hash with identical bench nodes; if the
+shipped binary is a profile-build, record its own hash and profile here.
 
 License: GPL-3.0-or-later. See Copying.txt and NOTICE.

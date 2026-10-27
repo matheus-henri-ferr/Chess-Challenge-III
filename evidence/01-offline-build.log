@@ -1,18 +1,18 @@
 ChessChallendIII offline build proof (FOUND-04)
-build commit (default branch HEAD): 273af4f1ddcf03cba1d15127e40f9a9855e603a9
+build commit (default branch HEAD): 1e4f0482e6c3b14077d7b38cd3076a2a4153c8f0
 namespace: unshare -rn
 id -u: 1000
-date: 2026-10-27T12:43:06Z
+date: 2026-10-27T13:13:48Z
 provenance: sf_19 is an ancestor of HEAD: OK
-git clone <local repo> at 273af4f1ddcf03cba1d15127e40f9a9855e603a9: OK
+git clone <local repo> at 1e4f0482e6c3b14077d7b38cd3076a2a4153c8f0: OK
 git ls-files --error-unmatch src/nn-1a298aa575a0.nnue: OK
 src/nn-1a298aa575a0.nnue: OK
 Existing nn-1a298aa575a0.nnue validated, skipping download
-make: Entering directory '/tmp/tmp.kOBYNtvsZH/chesschallendiii/src'
-make: Leaving directory '/tmp/tmp.kOBYNtvsZH/chesschallendiii/src'
+make: Entering directory '/tmp/tmp.oTtz1ycxlF/chesschallendiii/src'
+make: Leaving directory '/tmp/tmp.oTtz1ycxlF/chesschallendiii/src'
 
 ## namespace build (clone, objclean first)
-make: Entering directory '/tmp/tmp.kOBYNtvsZH/chesschallendiii/src'
+make: Entering directory '/tmp/tmp.oTtz1ycxlF/chesschallendiii/src'
 Existing nn-1a298aa575a0.nnue validated, skipping download
 
 Config:
@@ -54,13 +54,13 @@ LDFLAGS:   -m64 -Wl,--no-as-needed -lpthread -lrt  -Wall -Wcast-qual -fno-except
 Testing config sanity. If this fails, try 'make help' ...
 
 make ARCH=x86-64-avxvnni COMP=gcc all
-make[1]: Entering directory '/tmp/tmp.kOBYNtvsZH/chesschallendiii/src'
+make[1]: Entering directory '/tmp/tmp.oTtz1ycxlF/chesschallendiii/src'
 g++ -Wall -Wcast-qual -fno-exceptions -std=c++17 -pedantic -Wextra -Wshadow -Wmissing-declarations -m64 -Wstack-usage=128000 -fno-ipa-cp-clone -fconstexpr-ops-limit=500000000 -DNDEBUG -O3 -funroll-loops -DIS_64BIT -msse -msse3 -mpopcnt -DUSE_POPCNT -DUSE_AVX2 -mavx2 -mbmi -DUSE_VNNI -DUSE_AVXVNNI -mavxvnni -DUSE_SSE41 -msse4.1 -DUSE_SSSE3 -mssse3 -DUSE_SSE2 -msse2 -DUSE_PEXT -mbmi2 -DARCH=x86-64-avxvnni -flto -flto-partition=one -c -o attacks.o attacks.cpp
 g++ -Wall -Wcast-qual -fno-exceptions -std=c++17 -pedantic -Wextra -Wshadow -Wmissing-declarations -m64 -Wstack-usage=128000 -fno-ipa-cp-clone -fconstexpr-ops-limit=500000000 -DNDEBUG -O3 -funroll-loops -DIS_64BIT -msse -msse3 -mpopcnt -DUSE_POPCNT -DUSE_AVX2 -mavx2 -mbmi -DUSE_VNNI -DUSE_AVXVNNI -mavxvnni -DUSE_SSE41 -msse4.1 -DUSE_SSSE3 -mssse3 -DUSE_SSE2 -msse2 -DUSE_PEXT -mbmi2 -DARCH=x86-64-avxvnni -flto -flto-partition=one -c -o benchmark.o benchmark.cpp
 g++ -Wall -Wcast-qual -fno-exceptions -std=c++17 -pedantic -Wextra -Wshadow -Wmissing-declarations -m64 -Wstack-usage=128000 -fno-ipa-cp-clone -fconstexpr-ops-limit=500000000 -DNDEBUG -O3 -funroll-loops -DIS_64BIT -msse -msse3 -mpopcnt -DUSE_POPCNT -DUSE_AVX2 -mavx2 -mbmi -DUSE_VNNI -DUSE_AVXVNNI -mavxvnni -DUSE_SSE41 -msse4.1 -DUSE_SSSE3 -mssse3 -DUSE_SSE2 -msse2 -DUSE_PEXT -mbmi2 -DARCH=x86-64-avxvnni -flto -flto-partition=one -c -o bitboard.o bitboard.cpp
 g++ -Wall -Wcast-qual -fno-exceptions -std=c++17 -pedantic -Wextra -Wshadow -Wmissing-declarations -m64 -Wstack-usage=128000 -fno-ipa-cp-clone -fconstexpr-ops-limit=500000000 -DNDEBUG -O3 -funroll-loops -DIS_64BIT -msse -msse3 -mpopcnt -DUSE_POPCNT -DUSE_AVX2 -mavx2 -mbmi -DUSE_VNNI -DUSE_AVXVNNI -mavxvnni -DUSE_SSE41 -msse4.1 -DUSE_SSSE3 -mssse3 -DUSE_SSE2 -msse2 -DUSE_PEXT -mbmi2 -DARCH=x86-64-avxvnni -flto -flto-partition=one -c -o evaluate.o evaluate.cpp
 g++ -Wall -Wcast-qual -fno-exceptions -std=c++17 -pedantic -Wextra -Wshadow -Wmissing-declarations -m64 -Wstack-usage=128000 -fno-ipa-cp-clone -fconstexpr-ops-limit=500000000 -DNDEBUG -O3 -funroll-loops -DIS_64BIT -msse -msse3 -mpopcnt -DUSE_POPCNT -DUSE_AVX2 -mavx2 -mbmi -DUSE_VNNI -DUSE_AVXVNNI -mavxvnni -DUSE_SSE41 -msse4.1 -DUSE_SSSE3 -mssse3 -DUSE_SSE2 -msse2 -DUSE_PEXT -mbmi2 -DARCH=x86-64-avxvnni -flto -flto-partition=one -c -o main.o main.cpp
-g++ -Wall -Wcast-qual -fno-exceptions -std=c++17 -pedantic -Wextra -Wshadow -Wmissing-declarations -m64 -Wstack-usage=128000 -fno-ipa-cp-clone -fconstexpr-ops-limit=500000000 -DNDEBUG -O3 -funroll-loops -DIS_64BIT -msse -msse3 -mpopcnt -DUSE_POPCNT -DUSE_AVX2 -mavx2 -mbmi -DUSE_VNNI -DUSE_AVXVNNI -mavxvnni -DUSE_SSE41 -msse4.1 -DUSE_SSSE3 -mssse3 -DUSE_SSE2 -msse2 -DUSE_PEXT -mbmi2 -DARCH=x86-64-avxvnni -flto -flto-partition=one -DGIT_SHA=273af4f1 -DGIT_DATE=20261027  -c -o misc.o misc.cpp
+g++ -Wall -Wcast-qual -fno-exceptions -std=c++17 -pedantic -Wextra -Wshadow -Wmissing-declarations -m64 -Wstack-usage=128000 -fno-ipa-cp-clone -fconstexpr-ops-limit=500000000 -DNDEBUG -O3 -funroll-loops -DIS_64BIT -msse -msse3 -mpopcnt -DUSE_POPCNT -DUSE_AVX2 -mavx2 -mbmi -DUSE_VNNI -DUSE_AVXVNNI -mavxvnni -DUSE_SSE41 -msse4.1 -DUSE_SSSE3 -mssse3 -DUSE_SSE2 -msse2 -DUSE_PEXT -mbmi2 -DARCH=x86-64-avxvnni -flto -flto-partition=one -DGIT_SHA=1e4f0482 -DGIT_DATE=20261027  -c -o misc.o misc.cpp
 g++ -Wall -Wcast-qual -fno-exceptions -std=c++17 -pedantic -Wextra -Wshadow -Wmissing-declarations -m64 -Wstack-usage=128000 -fno-ipa-cp-clone -fconstexpr-ops-limit=500000000 -DNDEBUG -O3 -funroll-loops -DIS_64BIT -msse -msse3 -mpopcnt -DUSE_POPCNT -DUSE_AVX2 -mavx2 -mbmi -DUSE_VNNI -DUSE_AVXVNNI -mavxvnni -DUSE_SSE41 -msse4.1 -DUSE_SSSE3 -mssse3 -DUSE_SSE2 -msse2 -DUSE_PEXT -mbmi2 -DARCH=x86-64-avxvnni -flto -flto-partition=one -c -o movegen.o movegen.cpp
 g++ -Wall -Wcast-qual -fno-exceptions -std=c++17 -pedantic -Wextra -Wshadow -Wmissing-declarations -m64 -Wstack-usage=128000 -fno-ipa-cp-clone -fconstexpr-ops-limit=500000000 -DNDEBUG -O3 -funroll-loops -DIS_64BIT -msse -msse3 -mpopcnt -DUSE_POPCNT -DUSE_AVX2 -mavx2 -mbmi -DUSE_VNNI -DUSE_AVXVNNI -mavxvnni -DUSE_SSE41 -msse4.1 -DUSE_SSSE3 -mssse3 -DUSE_SSE2 -msse2 -DUSE_PEXT -mbmi2 -DARCH=x86-64-avxvnni -flto -flto-partition=one -c -o movepick.o movepick.cpp
 g++ -Wall -Wcast-qual -fno-exceptions -std=c++17 -pedantic -Wextra -Wshadow -Wmissing-declarations -m64 -Wstack-usage=128000 -fno-ipa-cp-clone -fconstexpr-ops-limit=500000000 -DNDEBUG -O3 -funroll-loops -DIS_64BIT -msse -msse3 -mpopcnt -DUSE_POPCNT -DUSE_AVX2 -mavx2 -mbmi -DUSE_VNNI -DUSE_AVXVNNI -mavxvnni -DUSE_SSE41 -msse4.1 -DUSE_SSSE3 -mssse3 -DUSE_SSE2 -msse2 -DUSE_PEXT -mbmi2 -DARCH=x86-64-avxvnni -flto -flto-partition=one -c -o position.o position.cpp
@@ -82,8 +82,8 @@ g++ -Wall -Wcast-qual -fno-exceptions -std=c++17 -pedantic -Wextra -Wshadow -Wmi
 g++ -Wall -Wcast-qual -fno-exceptions -std=c++17 -pedantic -Wextra -Wshadow -Wmissing-declarations -m64 -Wstack-usage=128000 -fno-ipa-cp-clone -fconstexpr-ops-limit=500000000 -DNDEBUG -O3 -funroll-loops -DIS_64BIT -msse -msse3 -mpopcnt -DUSE_POPCNT -DUSE_AVX2 -mavx2 -mbmi -DUSE_VNNI -DUSE_AVXVNNI -mavxvnni -DUSE_SSE41 -msse4.1 -DUSE_SSSE3 -mssse3 -DUSE_SSE2 -msse2 -DUSE_PEXT -mbmi2 -DARCH=x86-64-avxvnni -flto -flto-partition=one -c -o score.o score.cpp
 g++ -Wall -Wcast-qual -fno-exceptions -std=c++17 -pedantic -Wextra -Wshadow -Wmissing-declarations -m64 -Wstack-usage=128000 -fno-ipa-cp-clone -fconstexpr-ops-limit=500000000 -DNDEBUG -O3 -funroll-loops -DIS_64BIT -msse -msse3 -mpopcnt -DUSE_POPCNT -DUSE_AVX2 -mavx2 -mbmi -DUSE_VNNI -DUSE_AVXVNNI -mavxvnni -DUSE_SSE41 -msse4.1 -DUSE_SSSE3 -mssse3 -DUSE_SSE2 -msse2 -DUSE_PEXT -mbmi2 -DARCH=x86-64-avxvnni -flto -flto-partition=one -c -o memory.o memory.cpp
 g++ -o stockfish attacks.o benchmark.o bitboard.o evaluate.o main.o misc.o movegen.o movepick.o position.o search.o thread.o timeman.o tt.o uci.o ucioption.o tune.o tbprobe.o nnue_accumulator.o nnue_misc.o network.o half_ka_v2_hm.o full_threats.o pp_3wide.o engine.o score.o memory.o   -m64 -Wl,--no-as-needed -lpthread -lrt  -Wall -Wcast-qual -fno-exceptions -std=c++17  -pedantic -Wextra -Wshadow -Wmissing-declarations -m64 -Wstack-usage=128000 -fno-ipa-cp-clone -fconstexpr-ops-limit=500000000 -DNDEBUG -O3 -funroll-loops -DIS_64BIT -msse -msse3 -mpopcnt -DUSE_POPCNT -DUSE_AVX2 -mavx2 -mbmi -DUSE_VNNI -DUSE_AVXVNNI -mavxvnni -DUSE_SSE41 -msse4.1 -DUSE_SSSE3 -mssse3 -DUSE_SSE2 -msse2 -DUSE_PEXT -mbmi2 -DARCH=x86-64-avxvnni -flto -flto-partition=one -flto=jobserver
-make[1]: Leaving directory '/tmp/tmp.kOBYNtvsZH/chesschallendiii/src'
-make: Leaving directory '/tmp/tmp.kOBYNtvsZH/chesschallendiii/src'
+make[1]: Leaving directory '/tmp/tmp.oTtz1ycxlF/chesschallendiii/src'
+make: Leaving directory '/tmp/tmp.oTtz1ycxlF/chesschallendiii/src'
 binary built and executable: OK
 
 ## embedded-net proof
@@ -92,17 +92,17 @@ export_net cmp: identical
 ## bench (stderr captured)
 
 ===========================
-Total time (ms) : 3661
+Total time (ms) : 3625
 Nodes searched  : 2497913
-Nodes/second    : 682303
+Nodes/second    : 689079
 bench nodes: 2497913
 
 ## namespace build identity
-077d3601b503c369f97ed06df73cd5f3b44fd3d3fa513e31c92065da992c4a79  src/stockfish
-2026-10-27 09:44:12.041509525 -0300 99358768
+795056df4461712fdcf10b5da4b95bd0e3d235251665fd9a1fb39f65b4e0b294  src/stockfish
+2026-10-27 10:14:35.442352611 -0300 99359136
 make: Entering directory '/home/theusxix/Desktop/ProjectsOwn/ChessChallendIII/src'
 make: Leaving directory '/home/theusxix/Desktop/ProjectsOwn/ChessChallendIII/src'
 
 ## working-tree rebuild (clean, same commit)
-working-tree sha256: 077d3601b503c369f97ed06df73cd5f3b44fd3d3fa513e31c92065da992c4a79
+working-tree sha256: 795056df4461712fdcf10b5da4b95bd0e3d235251665fd9a1fb39f65b4e0b294
 OFFLINE BUILD PROOF COMPLETE
