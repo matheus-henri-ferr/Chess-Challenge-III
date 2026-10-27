@@ -31,6 +31,9 @@ import subprocess
 import sys
 
 from console.transport.uci import EngineTransport, go_line
+from console.game.board import BoardState
+from console.engine.session import Session
+from console.ui.loop import OperatorLoop
 
 # Smoke probes spawn throwaway engine instances; run them from the repo root
 # so relative paths (./src/stockfish, tools/mock_none_engine.py) resolve the
@@ -46,9 +49,31 @@ def parse_args():
                    help="extra flag passed to the engine, repeatable")
     p.add_argument("--record", default=None,
                    help="JSONL transcript path (stdin/stdout + monotonic stamps)")
+    p.add_argument("--our-color", choices=("w", "b"), default="w",
+                   help="our colour this game (default w); with b the console"
+                        " waits for the opponent's first move")
+    p.add_argument("--clock-ms", action="append", default=[],
+                   help="clock passthrough numbers for the frozen go line,"
+                        " repeatable: w=600000,b=600000 (Phase 3 replaces"
+                        " with the ClockModel)")
     p.add_argument("--transport-smoke", action="store_true",
                    help="run the five-wire-fact spike against --engine and exit")
     return p.parse_args()
+
+
+def parse_clock_ms(specs):
+    """`w=600000,b=600000` repeatable specs → (w_ms, b_ms)."""
+    clocks = {"w": 600000, "b": 600000}
+    for spec in specs:
+        for part in spec.split(","):
+            if not part.strip():
+                continue
+            side, _, value = part.partition("=")
+            side = side.strip().lower()
+            if side not in ("w", "b") or not value.strip().isdigit():
+                raise SystemExit(f"bad --clock-ms spec: {part!r} (use w=<ms>,b=<ms>)")
+            clocks[side] = int(value)
+    return clocks["w"], clocks["b"]
 
 
 def engine_argv(args):
@@ -240,13 +265,43 @@ raise SystemExit(0 if (b"CRITICAL ERROR" in out and rc == 1) else 1)
 '''
 
 
+def run_game(args) -> int:
+    """Game mode: handshake → §2.3 options at IDLE → start_game (B1) → loop.
+
+    Startup order is load-bearing: option flush happens BEFORE start_game
+    (flush is IDLE-only), and with --our-color w the game-start trigger
+    fires search #1 without operator input; with b the console waits for
+    the opponent's first typed move.
+    """
+    w_ms, b_ms = parse_clock_ms(args.clock_ms)
+    argv = engine_argv(args)
+    # Python engine scripts run from the repo root so tools/ imports and
+    # relative --record paths resolve the same from any caller cwd.
+    transport = EngineTransport(argv, record=args.record,
+                                cwd=str(REPO_ROOT)
+                                if args.engine.endswith(".py") else None)
+    try:
+        transport.handshake(timeout=10.0)
+        sink = lambda event: None  # 02-03 journals; Phase 2 sinks discard
+        session = Session(transport, BoardState(), sink=sink,
+                          our_color=args.our_color)
+        session.clock_passthrough_ms = (w_ms, b_ms)
+        session.apply_startup_options()  # §2.3 set, flushed once at IDLE
+        session.start_game()             # B1 fix: search #1 fires iff we move first
+        loop = OperatorLoop(session, transport)
+        return loop.run()
+    finally:
+        try:
+            transport.close()
+        except (RuntimeError, OSError):
+            pass
+
+
 def main() -> int:
     args = parse_args()
     if args.transport_smoke:
         return transport_smoke(args)
-    print("console: game mode lands in plan 02-02 (this plan ships the transport)",
-          file=sys.stderr)
-    return 1
+    return run_game(args)
 
 
 if __name__ == "__main__":
