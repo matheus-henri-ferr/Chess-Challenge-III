@@ -36,6 +36,15 @@ sys.path.insert(0, str(TOOLS))
 import mock_engine  # noqa: E402
 import mock_gui     # noqa: E402
 
+# plan 02-01 Task 3: the console's frozen go builders join the agreement.
+sys.path.insert(0, str(REPO / "console" / "src"))
+from console.transport.uci import (  # noqa: E402
+    GO_LITERAL as CONSOLE_GO_LITERAL,
+    FORBIDDEN_GO_TOKENS as CONSOLE_FORBIDDEN_GO_TOKENS,
+    go_line as console_go_line,
+    go_ponder_line as console_go_ponder_line,
+)
+
 FORBIDDEN = ("movetime", "movestogo", "depth", "nodes", "infinite", "searchmoves")
 LOG_KEYS = ("move_no", "side", "uci", "depth", "nodes", "score", "pv",
             "engine_ms", "wall_ms")
@@ -74,6 +83,78 @@ class GoLiteralTests(unittest.TestCase):
                          "go wtime 798000 btime 851000 winc 10000 binc 10000")
         self.assertEqual(g.go_line(1, 2, ponder=True),
                          "go ponder wtime 1 btime 2 winc 10000 binc 10000")
+
+    # --- plan 02-01 Task 3: console ↔ document ↔ mock agreement -----------
+
+    def test_console_literal_three_way_agreement(self):
+        """The console GO_LITERAL is byte-identical to mock_engine's and
+        mock_gui's (three-way, both directions) — and to the document."""
+        self.assertEqual(CONSOLE_GO_LITERAL, mock_engine.GO_LITERAL)
+        self.assertEqual(mock_engine.GO_LITERAL, mock_gui.GO_LITERAL)
+        self.assertEqual(CONSOLE_GO_LITERAL, mock_gui.GO_LITERAL)
+        self.assertEqual(CONSOLE_GO_LITERAL,
+                         "go wtime <int_ms> btime <int_ms> winc 10000 binc 10000")
+
+    def test_console_go_line_is_the_document_worked_example(self):
+        """PROTOCOL §3.4's worked example instantiates the same frozen
+        template the console builder produces."""
+        self.assertEqual(console_go_line(798000, 851000),
+                         "go wtime 798000 btime 851000 winc 10000 binc 10000")
+
+    def test_console_go_ponder_line_is_the_document_variant(self):
+        """PROTOCOL §3.5's ponder variant from the console builder."""
+        self.assertEqual(console_go_ponder_line(1, 2),
+                         "go ponder wtime 1 btime 2 winc 10000 binc 10000")
+
+    def test_console_builder_output_has_no_forbidden_tokens(self):
+        """Both console builders emit lines containing none of the §3.2
+        forbidden tokens — including depth/nodes, which the console guards
+        via FORBIDDEN_GO_TOKENS."""
+        for w, b in ((798000, 851000), (1, 2), (0, 0), (600000, 600000)):
+            for line in (console_go_line(w, b), console_go_ponder_line(w, b)):
+                for token in CONSOLE_FORBIDDEN_GO_TOKENS:
+                    self.assertNotIn(token, line, (line, token))
+
+
+class ConsoleSourceTests(unittest.TestCase):
+    """plan 02-01 Task 3: the four never-legitimate go tokens appear
+    nowhere in console source. The guard definition itself is the one
+    exemption: FORBIDDEN_GO_TOKENS in uci.py must list exactly these
+    tokens (that constant IS the §3.2 guard — its listing is the
+    prohibition, not a use). depth/nodes are exempt from this walk
+    (the info parser legitimately keys on them); the builder-output
+    test above guards them instead."""
+
+    SOURCE_WALK_TOKENS = ("movetime", "movestogo", "infinite", "searchmoves")
+    GUARD_FILE = "uci.py"
+    GUARD_RE = re.compile(r"FORBIDDEN_GO_TOKENS\s*=\s*\([^)]*\)", re.DOTALL)
+
+    def test_console_source_has_no_forbidden_go_tokens(self):
+        src = REPO / "console" / "src"
+        py_files = sorted(src.rglob("*.py"))
+        self.assertTrue(py_files, "console source tree must exist")
+        for path in py_files:
+            text = path.read_text(encoding="utf-8")
+            for token in self.SOURCE_WALK_TOKENS:
+                if token not in text:
+                    continue
+                # Sole exemption: the guard constant in uci.py, and only
+                # inside the FORBIDDEN_GO_TOKENS = (...) assignment block.
+                self.assertEqual(path.name, self.GUARD_FILE,
+                                 f"{token} in {path.relative_to(REPO)}")
+                stripped = self.GUARD_RE.sub("", text)
+                self.assertNotIn(
+                    token, stripped,
+                    f"{token} outside the guard tuple in {path.name}")
+
+    def test_guard_tuple_lists_exactly_the_never_tokens(self):
+        """The exemption is tight: uci.py's FORBIDDEN_GO_TOKENS must be
+        exactly the four never-legitimate tokens plus the two the parser
+        keys on — no more, no less (§3.2's full six)."""
+        self.assertEqual(
+            set(CONSOLE_FORBIDDEN_GO_TOKENS),
+            {"movetime", "movestogo", "depth", "nodes",
+             "infinite", "searchmoves"})
 
 
 class ForbiddenTokenTests(unittest.TestCase):
