@@ -205,6 +205,7 @@ class EngineTransport:
             self.popen.kill()
             self.popen.wait()
         try:
+            self.popen.stdin.close()
             self.popen.stdout.close()
             self.popen.stderr.close()
         except (OSError, ValueError):
@@ -258,22 +259,52 @@ class EngineTransport:
         if self.outstanding is not None:
             raise RuntimeError(
                 "start_search with a go outstanding (PROTOCOL §1.3)")
+        # §7.3 ordering 3 first: a bestmove still unconsumed in the queue is
+        # stale the moment a new go is about to be sent — re-flag it BEFORE
+        # the new search id is handed out (RESEARCH Pattern 1).
+        self._reconcile_queued_bestmoves()
         self.search_id += 1
         self.outstanding = self.search_id
         return self.search_id
+
+    def _reconcile_queued_bestmoves(self):
+        """Re-flag every unconsumed bestmove still in the events queue as
+        stale_bestmove (preserving the rest of the queue in order) so no
+        downstream consumer can mistake it for the next search's answer."""
+        kept = []
+        while True:
+            try:
+                event = self.events.get_nowait()
+            except queue.Empty:
+                break
+            if event.get("type") == "bestmove":
+                self.events.put({"type": "stale_bestmove",
+                                 "move": event["move"],
+                                 "ponder": event.get("ponder"),
+                                 "search_id": event.get("search_id")})
+            else:
+                kept.append(event)
+        for event in kept:
+            self.events.put(event)
 
     def mark_discarding(self):
         """Ponder-miss stop path (§8.2): the owed bestmove must be discarded.
         The next bestmove is flagged stale and clears the flag."""
         self.discarding = True
+
     def wait_for_bestmove(self, timeout):
         """Drain the event queue until the bestmove for the current search
         arrives, re-queuing everything else (§1.3: consume the owed bestmove
-        before the next go). TimeoutError when it never arrives."""
+        before the next go). Raises TimeoutError when it never arrives."""
         deferred = []
         try:
             while True:
-                event = self.events.get(timeout=timeout)
+                try:
+                    event = self.events.get(timeout=timeout)
+                except queue.Empty:
+                    raise TimeoutError(
+                        f"no bestmove within {timeout}s "
+                        f"(search {self.search_id})") from None
                 if event["type"] == "bestmove" and \
                         event.get("search_id") == self.search_id:
                     return event
