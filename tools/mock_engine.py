@@ -66,6 +66,7 @@ class MockEngine:
         self.moves = []
         self.search_count = 0
         self.last_position = "startpos"
+        self.go_received_at = time.monotonic()
 
     # --- output helpers -------------------------------------------------
     def send(self, line):
@@ -111,6 +112,7 @@ class MockEngine:
     def handle_go(self, line):
         self.search_count += 1
         self.searching = True
+        self.go_received_at = time.monotonic()
         self.rec.log("state", f"go accepted (search {self.search_count})")
 
         if self.args.crash_after and self.search_count > self.args.crash_after:
@@ -122,16 +124,17 @@ class MockEngine:
 
         # A real engine emits one deepest-first info script. Keep it honest:
         # depth strictly increases, then exactly one bestmove (PROTOCOL §7.1).
-        # The reported `time` must stay <= wall-clock: it counts only from the
-        # first info emission (t=0 here), while the wall clock also covers the
-        # caller-side --delay-ms latency. Engine-reported time is capped at
-        # 2/3 of that delay so wall_ms >= engine_ms always holds (LOGBOOK §2.2).
-        max_engine_ms = max(1, int(self.args.delay_ms * 2 / 3)) if self.args.delay_ms else 0
+        # The reported `time` must stay <= wall-clock (LOGBOOK §2.2: a real
+        # engine cannot report more time than it spent). The caller-side
+        # --delay-ms models operator latency; reported time is capped at both
+        # the synthetic script value AND the real elapsed ms.
+        elapsed_ms = int((time.monotonic() - self.go_received_at) * 1000)
+        max_engine_ms = max(1, int(self.args.delay_ms * 2 / 3)) if self.args.delay_ms else 1 << 62
         base_nodes = 800_000 + 31_000 * len(self.moves)
         for depth, mult in ((9, 1), (13, 3), (16, 7)):
             nodes = base_nodes * mult
             nps = 2_100_000
-            t_ms = min(int(nodes / nps * 1000), max_engine_ms) if max_engine_ms else int(nodes / nps * 1000)
+            t_ms = min(int(nodes / nps * 1000), max_engine_ms, elapsed_ms)
             pv = self.pv_for(depth)
             self.send(f"info depth {depth} seldepth {depth + 6} multipv 1 "
                       f"score cp {12 - depth} nodes {nodes} nps {nps} "

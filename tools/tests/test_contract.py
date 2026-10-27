@@ -18,6 +18,8 @@
   nonzero when an implementation commit predates the docs freeze.
 """
 
+import csv
+import os
 import pathlib
 import re
 import subprocess
@@ -115,8 +117,30 @@ class LogbookCsvTests(unittest.TestCase):
             self.assertIn(f"`{key}`", LOGBOOK, f"key {key} not specified in LOGBOOK")
 
 
-class OrderingCheckerTests(unittest.TestCase):
-    """Synthetic repos exercising tools/check_contract_order.py."""
+class RuntimeEndToEndTests(unittest.TestCase):
+    """The verifier's G1 regression: mock_gui ↔ mock_engine as real
+    processes. Pure-unit tests above cannot catch pipe-buffering deadlocks
+    or bestmove-parsing corruption; only a spawned session can."""
+
+    def test_gui_drives_mock_engine_end_to_end(self):
+        csv_path = tempfile.mktemp(prefix="gui-e2e-", suffix=".csv")
+        self.addCleanup(lambda: os.path.exists(csv_path) and os.unlink(csv_path))
+        p = subprocess.run(
+            [sys.executable, "tools/mock_gui.py",
+             "--engine", "tools/mock_engine.py",
+             "--games", "1", "--max-plies", "4", "--tc", "15:10",
+             "--csv", csv_path],
+            cwd=REPO, capture_output=True, text=True, timeout=180,
+            env={**os.environ, "PYTHONPATH": str(REPO / "vendor")},
+        )
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        self.assertIn("OK mock_gui", p.stdout)
+        rows = list(csv.DictReader(open(csv_path)))
+        self.assertEqual(len(rows), 4, rows)
+        self.assertTrue(all(r["uci"] and r["pv"] for r in rows))
+
+
+
 
     def _repo(self):
         tmp = tempfile.TemporaryDirectory()

@@ -25,6 +25,7 @@ Per-move CSV columns: move_no,side,uci,depth,nodes,score,engine_ms,wall_ms,pv,tm
 import argparse
 import csv
 import json
+import os
 import random
 import selectors
 import subprocess
@@ -50,12 +51,16 @@ class EngineProc:
         argv = list(argv)
         if tm_trace and "--tm-trace" not in argv:
             argv.append("--tm-trace")
+        # Binary, unbuffered pipes: select() must see every byte the child
+        # writes. TextIO buffering here deadlocks (buffer drains the fd,
+        # select then times out on data we already own — verifier G1).
         self.popen = subprocess.Popen(
             argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, universal_newlines=True, bufsize=1,
+            stderr=subprocess.STDOUT, bufsize=0,
         )
         self.rec = open(record, "a", encoding="utf-8") if record else None
         self.pending_bestmove = None  # a bestmove nobody consumed yet (stale)
+        self._buf = b""
 
     def _record(self, direction, line):
         if self.rec:
@@ -67,23 +72,31 @@ class EngineProc:
         if self.popen.poll() is not None:
             raise RuntimeError(f"engine exited rc={self.popen.returncode}")
         self._record("in", line)
-        self.popen.stdin.write(line + "\n")
+        self.popen.stdin.write((line + "\n").encode())
         self.popen.stdin.flush()
 
     def readline(self, timeout=30.0):
-        """One line with a REAL timeout: a hung engine (--silent-hang) raises
-        instead of blocking in stdout.readline() forever."""
-        sel = selectors.DefaultSelector()
-        sel.register(self.popen.stdout, selectors.EVENT_READ)
-        try:
-            if not sel.select(timeout):
-                raise TimeoutError(f"engine silent for {timeout}s (hung or dead)")
-            raw = self.popen.stdout.readline()
-        finally:
-            sel.close()
-        if raw == "":  # EOF: engine died (PROTOCOL §9.2 territory)
-            raise RuntimeError("engine EOF (crashed or quit mid-exchange)")
-        line = raw.rstrip("\n")
+        """One line with a REAL timeout, on raw fd + own buffer.
+
+        TextIO buffering cannot be combined with select(): the buffer drains
+        the pipe and select() starves on bytes we already hold. So: select()
+        on the raw fd, os.read into our own buffer, split on newlines.
+        EOF (engine died) → RuntimeError (PROTOCOL §9.2 territory)."""
+        while b"\n" not in self._buf:
+            sel = selectors.DefaultSelector()
+            sel.register(self.popen.stdout, selectors.EVENT_READ)
+            try:
+                if not sel.select(timeout):
+                    raise TimeoutError(
+                        f"engine silent for {timeout}s (hung or dead)")
+                chunk = os.read(self.popen.stdout.fileno(), 65536)
+            finally:
+                sel.close()
+            if not chunk:
+                raise RuntimeError("engine EOF (crashed or quit mid-exchange)")
+            self._buf += chunk
+        raw, self._buf = self._buf.split(b"\n", 1)
+        line = raw.decode(errors="replace").rstrip("\r")
         if not line.strip():
             return self.readline(timeout)  # skip blank, budget resets
         self._record("out", line)
@@ -113,7 +126,9 @@ class EngineProc:
 
 
 def bestmove_of(line):
-    return line[len("bestmove "):]
+    # "bestmove e2e4 ponder c7c5" — the move token is the FIRST word after
+    # bestmove; a ponder suffix belongs to the engine, not the move list.
+    return line[len("bestmove "):].split()[0]
 
 
 class Game:
@@ -126,7 +141,9 @@ class Game:
         self.rows = []
 
     # --- the frozen go line (PROTOCOL §3.1) -----------------------------
-    def go_line(self, w_ms, b_ms, ponder=False):
+    # The contract fixes winc/binc at 10000 — the driver never varies them.
+    @staticmethod
+    def go_line(w_ms, b_ms, ponder=False):
         if ponder:
             return f"go ponder wtime {w_ms} btime {b_ms} winc 10000 binc 10000"
         return f"go wtime {w_ms} btime {b_ms} winc 10000 binc 10000"
@@ -190,6 +207,9 @@ class Game:
 
     def play(self):
         moves = []
+        # The engine sees winc/binc 10000 (frozen §3.1) regardless of --tc;
+        # the clock ledger uses the --tc increment, which is the value the
+        # operator's GUI would apply.
         clocks = [self.base_ms, self.base_ms]
         inc = self.inc
         for _ in range(self.args.max_plies):
