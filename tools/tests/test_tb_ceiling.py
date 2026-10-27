@@ -57,14 +57,16 @@ class TBCeilingTests(unittest.TestCase):
         self.assertIn("info string TB ceiling OK: SyzygyProbeLimit=0", out)
 
     def test_04_six_piece_directory_is_fatal(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            tb = pathlib.Path(tmp) / "tb"
-            tb.mkdir()
-            (tb / "KQRRBvK.rtbw").touch()  # 6 piece codes, zero-byte is enough
-            p = run_uci(f"setoption name SyzygyPath value {tb}\nquit\n")
-            self.assertEqual(p.returncode, 1, p.stdout)
-            self.assertIn(
-                "info string CRITICAL ERROR: TB CEILING VIOLATION:", p.stdout)
+        for name in ("KQRRBvK.rtbw", "KQRRBvK.rtbz"):  # WDL and DTZ-only
+            with self.subTest(file=name):
+                with tempfile.TemporaryDirectory() as tmp:
+                    tb = pathlib.Path(tmp) / "tb"
+                    tb.mkdir()
+                    (tb / name).touch()  # 6 piece codes, zero-byte is enough
+                    p = run_uci(f"setoption name SyzygyPath value {tb}\nquit\n")
+                    self.assertEqual(p.returncode, 1, p.stdout)
+                    self.assertIn(
+                        "info string CRITICAL ERROR: TB CEILING VIOLATION:", p.stdout)
 
     def test_05_five_piece_directory_is_accepted(self):
         with tempfile.TemporaryDirectory() as tmp:

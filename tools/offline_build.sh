@@ -72,12 +72,16 @@ EOF
   test -x src/stockfish
   echo "binary built and executable: OK"
 
-  # 5) The committed net really is inside the binary.
+  # 5) The committed net really is inside the binary. Export target is a
+  #    private temp path (CWE-377: no fixed /tmp name a local user could pre-
+  #    plant or symlink-swap between export and cmp).
   echo
   echo "## embedded-net proof"
-  printf 'export_net /tmp/net-exported.nnue\nquit\n' | src/stockfish >/dev/null
-  cmp src/nn-1a298aa575a0.nnue /tmp/net-exported.nnue
-  rm -f /tmp/net-exported.nnue
+  NET_EXPORT=$(mktemp "${TMPDIR:-/tmp}/offline-build-net.XXXXXX")
+  trap 'rm -f "$NET_EXPORT"' EXIT
+  printf 'export_net %s\nquit\n' "$NET_EXPORT" | src/stockfish >/dev/null
+  cmp src/nn-1a298aa575a0.nnue "$NET_EXPORT"
+  rm -f "$NET_EXPORT"
   echo "export_net cmp: identical"
 
   # 6) Bench must match the declared node count. bench prints its summary on
@@ -108,7 +112,9 @@ EOF
   #    precondition gates on). Expected byte-identical to the clone build.
   cd "$REPO"
   make -C src objclean
-  $NS make -C src -j"$(nproc)" build >/dev/null 2>&1
+  # Rebuild output goes to the log, not /dev/null — a failed compile must be
+  # visible in evidence, not silently replaced by test -x failing.
+  $NS make -C src -j"$(nproc)" build 2>&1 | sed 's/^/[working-tree-rebuild] /'
   test -x src/stockfish
   WORKING_HASH=$($sha256sum src/stockfish | awk '{print $1}')
 

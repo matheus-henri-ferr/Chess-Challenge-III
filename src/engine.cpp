@@ -126,18 +126,8 @@ Engine::Engine(std::optional<std::filesystem::path> path) :
     options.add(  //
       "SyzygyPath", Option("", [this](const Option& o) {
           Tablebases::init(o);
-          // ChessChallendIII: Rule 4 ceiling is fatal, not advisory. A
-          // returned string cannot block anything, so a violation exits.
-          // (terminate_on_critical_error is private to UCIEngine; only its
-          // output shape is replicated here.)
-          if (const auto violation = verify_tb_ceiling();
-              violation.has_value()
-              && violation->rfind("TB CEILING VIOLATION", 0) == 0)
-          {
-              sync_cout << "info string CRITICAL ERROR: " << *violation
-                        << sync_endl;
-              std::exit(1);
-          }
+          // ChessChallendIII: Rule 4 ceiling is fatal, not advisory.
+          enforce_tb_ceiling();
           return std::nullopt;
       }));
 
@@ -169,9 +159,9 @@ void Engine::go(Search::LimitsType& limits) {
     assert(limits.perft == 0);
     verify_network();
 
-    // ChessChallendIII: attest the Rule 4 ceiling at the top of every search.
-    if (const auto msg = verify_tb_ceiling(); msg.has_value())
-        onVerifyNetwork(*msg);
+    // ChessChallendIII: attest the Rule 4 ceiling at the top of every search
+    // (fatal on violation — a live TB swap cannot slip through as a warning).
+    enforce_tb_ceiling();
 
     threads.start_thinking(options, pos, states, limits);
 }
@@ -186,9 +176,8 @@ void Engine::search_clear() {
     // TODO: does not work with multiple instances
     Tablebases::init(options["SyzygyPath"]);  // Free mapped files
 
-    // ChessChallendIII: re-attest after (re)initialising the tablebases.
-    if (const auto msg = verify_tb_ceiling(); msg.has_value())
-        onVerifyNetwork(*msg);
+    // ChessChallendIII: re-attest (fatal) after re-initialising the tablebases.
+    enforce_tb_ceiling();
 }
 
 void Engine::set_on_update_no_moves(std::function<void(const Engine::InfoShort&)>&& f) {
@@ -284,26 +273,95 @@ void Engine::set_tt_size(usize mb) {
 
 void Engine::set_ponderhit(bool b) { threads.main_manager()->ponder = b; }
 
+// Shared between verify_tb_ceiling() and enforce_tb_ceiling(): the fatal
+// branch keys on this constant, never on ad-hoc wording.
+constexpr std::string_view TbCeilingViolation = "TB CEILING VIOLATION";
+
 // tablebase related
 
 // ChessChallendIII: attest the Rule 4 five-piece ceiling. Returns a violation
 // message or a single-line OK attestation; never two lines (print_info_string
 // splits on newlines and each fragment becomes its own `info string`).
+// MaxCardinality only tracks WDL-loaded tables (tbprobe.cpp updates it after
+// the .rtbw open check), so the SyzygyPath is ALSO scanned for any file whose
+// name implies more pieces than the ceiling — a DTZ-only 6-man directory
+// would otherwise pass unnoticed.
 std::optional<std::string> Engine::verify_tb_ceiling() const {
-    const int probe_limit     = int(options["SyzygyProbeLimit"]);
-    const int max_loaded      = Tablebases::MaxCardinality;
-    const int ceiling         = Tablebases::TB_PROBE_LIMIT;
+    const int probe_limit = int(options["SyzygyProbeLimit"]);
+    const int max_loaded  = Tablebases::MaxCardinality;
+    const int ceiling     = Tablebases::TB_PROBE_LIMIT;
 
     // 0 is compliant: the tablebase is simply disabled.
     if (probe_limit > ceiling)
-        return "TB CEILING VIOLATION: SyzygyProbeLimit=" + std::to_string(probe_limit)
-             + " exceeds the Rule 4 ceiling " + std::to_string(ceiling);
+        return std::string(TbCeilingViolation) + ": SyzygyProbeLimit="
+             + std::to_string(probe_limit) + " exceeds the Rule 4 ceiling "
+             + std::to_string(ceiling);
     if (max_loaded > ceiling)
-        return "TB CEILING VIOLATION: max_loaded=" + std::to_string(max_loaded)
-             + " exceeds the Rule 4 ceiling " + std::to_string(ceiling);
+        return std::string(TbCeilingViolation) + ": max_loaded="
+             + std::to_string(max_loaded) + " exceeds the Rule 4 ceiling "
+             + std::to_string(ceiling);
+
+    if (const auto forbidden = scan_forbidden_tb_files(std::string(options["SyzygyPath"])))
+        return forbidden;
 
     return "TB ceiling OK: SyzygyProbeLimit=" + std::to_string(probe_limit)
          + " max_loaded=" + std::to_string(max_loaded);
+}
+
+// Rule 4 file-name scan over the raw SyzygyPath (separator-split like
+// tbprobe.cpp). A filename stem 'KQRRBvK' tokenises to 6 pieces.
+std::optional<std::string> Engine::scan_forbidden_tb_files(const std::string& paths) const {
+#ifndef _WIN32
+    constexpr char SepChar = ':';
+#else
+    constexpr char SepChar = ';';
+#endif
+    std::stringstream ss(paths);
+    std::string dir;
+    while (std::getline(ss, dir, SepChar))
+    {
+        if (dir.empty())
+            continue;
+        std::error_code ec;
+        for (const auto& entry : std::filesystem::directory_iterator(dir, ec))
+        {
+            const std::string name = entry.path().filename().string();
+            const auto is_tb = [&](const char* suf) {
+                const usize n = std::char_traits<char>::length(suf);
+                return name.size() >= n
+                    && name.compare(name.size() - n, n, suf) == 0;
+            };
+            if (!is_tb(".rtbw") && !is_tb(".rtbz"))
+                continue;
+            std::string stem = name.substr(0, name.rfind('.'));
+            const int pieces = int(stem.size())
+                             - int(std::count(stem.begin(), stem.end(), 'v'));
+            if (pieces > Tablebases::TB_PROBE_LIMIT)
+                return std::string(TbCeilingViolation) + ": " + name + " implies "
+                     + std::to_string(pieces)
+                     + " pieces, exceeding the Rule 4 ceiling "
+                     + std::to_string(Tablebases::TB_PROBE_LIMIT);
+        }
+        if (ec)
+            continue;  // unreadable/absent directory: not a possession violation
+    }
+    return std::nullopt;
+}
+
+// Fatal enforcement shared by all three call sites: a violation prints the
+// CRITICAL ERROR shape (terminate_on_critical_error is private to UCIEngine;
+// only its output shape is replicated) and exits — a returned string cannot
+// block anything. OK attestations ride the onVerifyNetwork sink.
+void Engine::enforce_tb_ceiling() const {
+    if (const auto msg = verify_tb_ceiling(); msg.has_value())
+    {
+        if (msg->rfind(TbCeilingViolation, 0) == 0)
+        {
+            sync_cout << "info string CRITICAL ERROR: " << *msg << sync_endl;
+            std::exit(1);
+        }
+        onVerifyNetwork(*msg);
+    }
 }
 
 // network related

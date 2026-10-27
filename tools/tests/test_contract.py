@@ -95,10 +95,8 @@ class TmTraceTests(unittest.TestCase):
         self.assertEqual(set(doc_tokens), set(mock_engine.TM_REASONS))
 
     def test_mock_emits_grammar_from_section_6(self):
-        # Shape asserted live via the emitted line in test_runtime agreement:
-        line = (f"info string tm=custom-v1.0 mode={mock_engine.TM_MODES[0]} "
-                f"latency_p95_ms=12 bank_ms=4500 budget_ms=18000 "
-                f"reason={mock_engine.TM_REASONS[0]}")
+        # The §6.1 grammar line must exist verbatim (the emitted shape is
+        # asserted live in the runtime transcript evidence).
         m = re.search(r"^info string tm=custom-v<MAJOR>\.<MINOR> "
                       r"mode=<increment\|sudden_death\|armageddon> "
                       r"latency_p95_ms=<int> bank_ms=<int> budget_ms=<int> "

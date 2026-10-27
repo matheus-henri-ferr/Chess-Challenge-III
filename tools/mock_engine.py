@@ -106,6 +106,7 @@ class MockEngine:
                 self.moves = tokens[tokens.index("moves") + 1:]
         elif tokens[1] == "fen":
             self.last_position = " ".join(tokens[2:8])
+            self.moves = []  # fen sets a fresh position: no move history
 
     def handle_go(self, line):
         self.search_count += 1

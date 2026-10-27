@@ -29,6 +29,10 @@ mkdir -p "$DEST"
 
 sha256sum=$( (command -v sha256sum >/dev/null 2>&1 && echo "sha256sum") ||
   (command -v shasum >/dev/null 2>&1 && echo "shasum -a 256"))
+if [ -z "$sha256sum" ]; then
+  echo "FATAL: neither sha256sum nor shasum found; cannot hash the archive" >&2
+  exit 2
+fi
 
 echo "archiving to $DEST (build commit $BUILD_COMMIT)"
 

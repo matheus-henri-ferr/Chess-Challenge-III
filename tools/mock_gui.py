@@ -10,8 +10,9 @@
 """Drives a real (or mock) UCI engine through the frozen contract so the TM
 track can measure budgets without the console.
 
-Imports stdlib plus `chess` from vendor/ for legality — run as:
-    PYTHONPATH=vendor python3 tools/mock_gui.py --engine tools/mock_engine.py ...
+Runs any UCI engine as a subprocess (stdlib only — the DRIVER does no legality
+work; legality is the console's job in Phase 2). Run as:
+    python3 tools/mock_gui.py --engine tools/mock_engine.py ...
 
 The driver sends ONLY the frozen `go` literal of PROTOCOL §3.1:
     go wtime <int_ms> btime <int_ms> winc 10000 binc 10000
@@ -25,6 +26,7 @@ import argparse
 import csv
 import json
 import random
+import selectors
 import subprocess
 import sys
 import time
@@ -62,22 +64,30 @@ class EngineProc:
             self.rec.flush()
 
     def send(self, line):
+        if self.popen.poll() is not None:
+            raise RuntimeError(f"engine exited rc={self.popen.returncode}")
         self._record("in", line)
         self.popen.stdin.write(line + "\n")
         self.popen.stdin.flush()
 
     def readline(self, timeout=30.0):
-        deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
+        """One line with a REAL timeout: a hung engine (--silent-hang) raises
+        instead of blocking in stdout.readline() forever."""
+        sel = selectors.DefaultSelector()
+        sel.register(self.popen.stdout, selectors.EVENT_READ)
+        try:
+            if not sel.select(timeout):
+                raise TimeoutError(f"engine silent for {timeout}s (hung or dead)")
             raw = self.popen.stdout.readline()
-            if raw == "":  # EOF: engine died (PROTOCOL §9.2 territory)
-                raise RuntimeError("engine EOF (crashed or quit mid-exchange)")
-            line = raw.rstrip("\n")
-            if not line.strip():
-                continue
-            self._record("out", line)
-            return line
-        raise TimeoutError("engine did not answer within timeout")
+        finally:
+            sel.close()
+        if raw == "":  # EOF: engine died (PROTOCOL §9.2 territory)
+            raise RuntimeError("engine EOF (crashed or quit mid-exchange)")
+        line = raw.rstrip("\n")
+        if not line.strip():
+            return self.readline(timeout)  # skip blank, budget resets
+        self._record("out", line)
+        return line
 
     def expect(self, exact):
         """Consume lines until one equals `exact`."""
@@ -87,6 +97,17 @@ class EngineProc:
                 return
 
     def close(self):
+        """Reap the engine on every path — quit first, then kill + wait, so
+        no hung mock (e.g. --silent-hang) survives the driver."""
+        try:
+            self.send("quit")
+        except (BrokenPipeError, RuntimeError, OSError):
+            pass
+        try:
+            self.popen.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            self.popen.kill()
+            self.popen.wait()
         if self.rec:
             self.rec.close()
 
@@ -96,10 +117,12 @@ def bestmove_of(line):
 
 
 class Game:
-    def __init__(self, args, proc, game_no):
+    def __init__(self, args, proc, game_no, base_ms, inc):
         self.args = args
         self.proc = proc
         self.game_no = game_no
+        self.base_ms = base_ms  # --tc minutes:inc, parsed once in main()
+        self.inc = inc
         self.rows = []
 
     # --- the frozen go line (PROTOCOL §3.1) -----------------------------
@@ -167,8 +190,8 @@ class Game:
 
     def play(self):
         moves = []
-        clocks = [15 * 60_000, 15 * 60_000]
-        inc = 10_000
+        clocks = [self.base_ms, self.base_ms]
+        inc = self.inc
         for _ in range(self.args.max_plies):
             mover = "w" if len(moves) % 2 == 0 else "b"
             side_idx = 0 if mover == "w" else 1
@@ -193,10 +216,10 @@ def parse_args():
     p.add_argument("--games", type=int, default=1)
     p.add_argument("--max-plies", type=int, default=16)
     p.add_argument("--start-fen", default=None, help="logged; mock plays the scripted opening")
-    p.add_argument("--tc", default="15:10", help="minutes:increment, e.g. 15:10")
+    p.add_argument("--tc", default="15:10",
+                   help="minutes:increment per side, e.g. 15:10 (drives the clocks)")
     p.add_argument("--latency-ms", default="5,20", help="p50,p95 operator tail in ms")
     p.add_argument("--option", action="append", default=[], help="k=v, repeatable")
-    p.add_argument("--ponder", action="store_true")
     p.add_argument("--require-tm", action="store_true",
                    help="launch engine with --tm-trace and assert tm= on every search")
     p.add_argument("--engine-arg", action="append", default=[],
@@ -233,17 +256,13 @@ def main() -> int:
 
         all_rows = []
         for g in range(args.games):
-            game = Game(args, proc, g)
+            game = Game(args, proc, g, base_ms, inc)
             moves = game.play()
             all_rows.extend(game.rows)
             # ucinewgame between games only (PROTOCOL §2.4)
             if g + 1 < args.games:
                 proc.send("ucinewgame")
     finally:
-        try:
-            proc.send("quit")
-        except (BrokenPipeError, RuntimeError):
-            pass
         proc.close()
 
     # Driver invariants (self-asserting contract checks)

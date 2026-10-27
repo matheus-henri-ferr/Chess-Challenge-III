@@ -131,16 +131,16 @@ def check_net():
         return
     record("PASS", f"net {NET_NAME} hash matches")
 
-    out = pathlib.Path("/tmp") / "doctor-net-export.nnue"
-    p = engine_stdio(f"export_net {out}\nquit\n")
-    if not out.is_file():
-        record("FAIL", f"export_net produced nothing ({p.stdout[-200:]})")
-        return
-    if sha256_file(out) != NET_SHA:
-        record("FAIL", "export_net round-trip differs from the declared net")
-        out.unlink()
-        return
-    out.unlink()
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        out = pathlib.Path(tmp) / "exported.nnue"
+        p = engine_stdio(f"export_net {out}\nquit\n")
+        if not out.is_file():
+            record("FAIL", f"export_net produced nothing ({p.stdout[-200:]})")
+            return
+        if sha256_file(out) != NET_SHA:
+            record("FAIL", "export_net round-trip differs from the declared net")
+            return
     record("PASS", "export_net round-trip byte-identical")
 
 

@@ -104,10 +104,6 @@ def main() -> int:
         if any(f.startswith(p) for p in IMPL_PREFIXES for f in files):
             if sha == freeze:
                 continue
-            if any(f.startswith(p) for f in files for p in IMPL_PREFIXES) and \
-               not any(f.startswith("src/") and not f.startswith(IMPL_PREFIXES)
-                       for f in files):
-                pass
             impl_shas.append(sha)
 
     if not impl_shas:

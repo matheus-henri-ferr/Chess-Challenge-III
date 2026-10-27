@@ -98,6 +98,8 @@ class Engine {
 
     void                                 verify_network() const;
     std::optional<std::string>           verify_tb_ceiling() const;
+    std::optional<std::string>           scan_forbidden_tb_files(const std::string& paths) const;
+    void                                 enforce_tb_ceiling() const;
     std::unique_ptr<Eval::NNUE::Network> get_default_network();
     void                                 load_network(const std::filesystem::path& file);
     void save_network(const std::optional<std::filesystem::path>& file);

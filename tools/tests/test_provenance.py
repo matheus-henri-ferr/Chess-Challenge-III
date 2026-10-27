@@ -59,13 +59,9 @@ class ProvenanceCheckerTests(unittest.TestCase):
         self.assertNotEqual(run_checker(self.copy).returncode, 0)
 
     def test_03_fails_on_missing_shipped_value_and_on_fastchess_marked_shipped(self):
-        # A dependency row missing its Shipped? cell (6 cells instead of 7).
+        # A dependency row missing its Shipped? cell (6 cells instead of 7):
+        # drop one cell value from the fastchess row.
         text = self.copy.read_text(encoding="utf-8")
-        mutated = text.replace(
-            "| fastchess |",
-            "| fastchess |",
-        )
-        # drop the Shipped? cell from the fastchess row by removing one column value
         lines = text.splitlines()
         out = []
         for line in lines:
@@ -78,10 +74,10 @@ class ProvenanceCheckerTests(unittest.TestCase):
         self.copy.write_text("\n".join(out) + "\n", encoding="utf-8")
         self.assertNotEqual(run_checker(self.copy).returncode, 0)
 
-        # fastchess marked shipped = yes must fail (dev-only, never in the engine tree).
-        self.copy.write_text(mutated, encoding="utf-8")
-        text = self.copy.read_text(encoding="utf-8")
-        self.assertIn("| fastchess |", text)
+        # fastchess marked shipped = yes must fail (dev-only, never in the engine
+        # tree). Reset to the pristine copy first: the first mutation removed
+        # the shipped cell this second mutation needs to flip.
+        self.copy.write_text(text, encoding="utf-8")
         lines = text.splitlines()
         out = []
         replaced = False

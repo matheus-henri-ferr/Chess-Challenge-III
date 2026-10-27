@@ -28,7 +28,6 @@ import sys
 REPO = pathlib.Path(__file__).parent.resolve().parent
 NOTICE = REPO / "NOTICE"
 
-BASE_SHA = "edb0d9db6731067ec50ce619ff372b463bc4dd5d"
 NET_SHA = "1a298aa575a085434d29027978dc36867fe9c5bcea9376654b7a8eba1e52dfc2"
 BENCH_NODES = "2497913"
 

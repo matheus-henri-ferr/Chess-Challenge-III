@@ -1,6 +1,6 @@
 # ChessChallendIII TB ceiling evidence (plan 01-03 Task 1, LIMIT-01)
-# date: 2026-10-27T13:02:59Z  commit: 71c079c29c43373833e1646decd94964bdcee775
-# binary: 795056df4461712fdcf10b5da4b95bd0e3d235251665fd9a1fb39f65b4e0b294  src/stockfish
+# date: 2026-10-27T13:53:26Z  commit: feb0d88ef6ea49342bf53cc94163b2fad1d8ccc1
+# binary: 527fa7ac4a23e124d207ebe342bbf0cf7c379277770a4073964ef17ce6ed5134  src/stockfish
 
 ## 1. option listing (uci)
 option name SyzygyProbeLimit type spin default 5 min 0 max 5
@@ -8,11 +8,15 @@ option name SyzygyProbeLimit type spin default 5 min 0 max 5
 ## 2. clamp + attestation (setoption 7, then go)
 info string TB ceiling OK: SyzygyProbeLimit=5 max_loaded=0
 
-## 3. fatal 6-piece directory
+## 3. fatal 6-piece directory (WDL)
 exit code: 1
 info string CRITICAL ERROR: TB CEILING VIOLATION: max_loaded=6 exceeds the Rule 4 ceiling 5
 
+## 3b. fatal DTZ-only 6-piece directory (filename scan — CR-01)
+exit code: 1
+info string CRITICAL ERROR: TB CEILING VIOLATION: KQRRBvK.rtbz implies 6 pieces, exceeding the Rule 4 ceiling 5
+
 ## 4. bench unchanged
-Total time (ms) : 3626
+Total time (ms) : 3666
 Nodes searched  : 2497913
-Nodes/second    : 688889
+Nodes/second    : 681372
