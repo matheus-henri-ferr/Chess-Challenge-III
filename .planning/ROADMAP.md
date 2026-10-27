@@ -16,7 +16,7 @@ Table stakes are 21–24 person-days against ~21 effective person-days in ten da
 - Integer phases (1, 2, 3): planned milestone work
 - Decimal phases (2.1, 2.2): urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Foundation, Provenance & Frozen Contract** - Day-0 compliance, pinned fork, offline build, frozen protocol/log schema, ship the stock binary and both mocks
+- [x] **Phase 1: Foundation, Provenance & Frozen Contract** - Day-0 compliance, pinned fork, offline build, frozen protocol/log schema, ship the stock binary and both mocks
 - [ ] **Phase 2: Console Protocol Spine** - Strict UCI parse, board replica, state machine, ANNOUNCE from `bestmove` only, journal and Rule 9 log
 - [ ] **Phase 3: Clock Authority, Resilience & Rule-Ceiling Guards** - Backdated dual clock, SYNC, watchdog, crash/engine-death recovery, match model, TB/book asserts, pre-game checklist
 - [ ] **Phase 4: Authored Time Manager (+ WIN GATE)** - Rewritten allocator as game default with per-search attestation, ablation evidence, and the non-negotiable day 6/7 WIN GATE
