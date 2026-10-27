@@ -56,7 +56,7 @@ engine itself refuses a directory containing a 6-man file (exit 1,
 
 ## 4. Not authored by the team
 
-- The Stockfish engine (GPLv3, tag `sf_19`, commit `edb0d9db6731067ec50ce619ff372b463bc4dd5d`) — every file under `src/` except the three dated modifications recorded in NOTICE.
+- The Stockfish engine (GPLv3, tag `sf_19`, commit `f879373d916914de3a478aabb4226e6460c17d15`) — every file under `src/` except the three dated modifications recorded in NOTICE.
 - The NNUE network (`nn-1a298aa575a0.nnue`, CC0-1.0) — official, unmodified.
 - Syzygy tablebase data.
 - Harness opening books (`official-stockfish/books`, CC0-1.0).

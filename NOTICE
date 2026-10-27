@@ -2,12 +2,12 @@
 
 Base project:                 https://github.com/official-stockfish/Stockfish
 Base tag:                     sf_19
-Base commit:                  edb0d9db6731067ec50ce619ff372b463bc4dd5d
+Base commit:                  f879373d916914de3a478aabb4226e6460c17d15
 Base commit date:             2026-09-05
 Fork date:                    2026-10-26
 Fork repository:              https://github.com/matheus-henri-ferr/Chess-Challenge-III
 License:                      GPL-3.0-or-later (see Copying.txt)
-Project commit (this build):  273af4f1ddcf03cba1d15127e40f9a9855e603a9
+Project commit (this build):  f36c8fe692ea2d34b45c9389bd79b8e96c5d9171
 Build command:                make -C src -j12 build
 Build profile:                build
 ARCH:                         x86-64-avxvnni
@@ -40,7 +40,7 @@ Added files of ours (not Stockfish):
 
 ## Narrative
 
-ChessChallendIII is a fork of Stockfish 19 (`sf_19`, commit `edb0d9db6731067ec50ce619ff372b463bc4dd5d`,
+ChessChallendIII is a fork of Stockfish 19 (`sf_19`, commit `f879373d916914de3a478aabb4226e6460c17d15`,
 dated 2026-09-05) prepared for the III Chess Challenge. The fork date is the first project
 commit (2026-10-26). Phase 1 touches only three upstream files (`src/engine.cpp`, `src/engine.h`,
 `src/syzygy/tbprobe.h`) to enforce the competition's five-piece tablebase ceiling (Rule 4);

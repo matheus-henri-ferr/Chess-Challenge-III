@@ -44,8 +44,8 @@ Three findings change the plan shape and are worth stating up front.
 
 | Item | Version / identity | Purpose | Why this, not an alternative | Provenance |
 |---|---|---|---|---|
-| Stockfish base | tag `sf_19` = `edb0d9db6731067ec50ce619ff372b463bc4dd5d` | Fork base | Full 7,252-commit upstream history is present (not shallow: `.git/shallow` absent, `git rev-list --count sf_19` = 7252) | `[VERIFIED: git rev-list sf_19]` |
-| Project branch base commit | `0ef8529b` "chore: import Stockfish sf_19 history as project base" | First project commit | Its blob hashes for `Copying.txt`/`AUTHORS` still match `sf_19` | `[VERIFIED: git rev-parse sf_19:Copying.txt HEAD:Copying.txt]` |
+| Stockfish base | tag `sf_19` = `f879373d916914de3a478aabb4226e6460c17d15` | Fork base | Full 7,252-commit upstream history is present (not shallow: `.git/shallow` absent, `git rev-list --count sf_19` = 7252) | `[VERIFIED: git rev-list sf_19]` |
+| Project branch base commit | `f3c88695` "chore: import Stockfish sf_19 history as project base" | First project commit | Its blob hashes for `Copying.txt`/`AUTHORS` still match `sf_19` | `[VERIFIED: git rev-parse sf_19:Copying.txt HEAD:Copying.txt]` |
 | NNUE net | `nn-1a298aa575a0.nnue`, 98,511,183 B, sha256 `1a298aa575a085434d29027978dc36867fe9c5bcea9376654b7a8eba1e52dfc2` | Evaluation | Embedded verbatim by `INCBIN`; `export_net` round-trip is byte-identical | `[VERIFIED: src/nnue/network.cpp:49-50; cmp of exported net]` |
 | Compiler | GCC 16.2.1 | C++17 toolchain | Already proven at this version | `[VERIFIED: gcc --version]` |
 | Make target | `make -C src -j build` | Build | `build` is the only goal that depends on `net` *and* links | `[VERIFIED: src/Makefile:1100]` |
@@ -77,7 +77,7 @@ Three findings change the plan shape and are worth stating up front.
 
 ```bash
 # 1) Engine base — already cloned; nothing to install.
-git -C . rev-parse sf_19            # edb0d9db6731067ec50ce619ff372b463bc4dd5d
+git -C . rev-parse sf_19            # f879373d916914de3a478aabb4226e6460c17d15
 
 # 2) python-chess — vendor the package directory, do not pip-install
 curl -sL -o /tmp/chess-1.11.2.tar.gz \
@@ -217,7 +217,7 @@ ChessChallendIII/
 # tools/check_notice.py — shape only; the planner fixes the exact regexes
 import re, subprocess, sys, pathlib
 
-BASE_SHA = "edb0d9db6731067ec50ce619ff372b463bc4dd5d"
+BASE_SHA = "f879373d916914de3a478aabb4226e6460c17d15"
 notice = pathlib.Path("NOTICE").read_text(encoding="utf-8")
 
 def must(pattern, label):
@@ -360,7 +360,7 @@ sys.exit(0 if rc == 0 else "FAIL: docs/ committed after first implementation com
 | **Stored data** | None. No database, no datastore, no cache keyed by the fork name. Verified: `grep -rn "ChessChallend" src/` returns nothing; there is no persistence layer in the engine. | None. Explicitly verified, not skipped. |
 | **Live service config** | None. No n8n/Datadog/Tailscale/Cloudflare equivalents; the project is offline by rule. The only "service config" is the git remote: `remote.upstream.url=https://github.com/official-stockfish/Stockfish` (a read-only provenance remote that must be **kept**). | Keep `upstream`; **add** the team's own `origin` when FOUND-06's dry run happens. Do not remove `upstream` — it is how `git diff sf_19` stays re-derivable. |
 | **OS-registered state** | None inside Phase 1. No systemd unit, no scheduled task, no pm2 process. The future `doctor`/`ruff` binaries are invoked directly. | None. Verified: no unit files in the repo, and `/etc` is untouched by this phase. |
-| **Secrets / env vars** | None. No `.env`, no CI secrets, no SOPS. The build reads only `GIT_SHA`/`GIT_DATE`/`GIT_DIFFINDEX` which the Makefile derives (`src/Makefile:915-917`) and caches to `src/.build_*.txt` (**gitignored**: `.gitignore:7-9`). | None. But **note the consequence**: the cached `.build_sha.txt` currently holds `0ef8529b` and `misc.o` was compiled with `-DGIT_SHA=0ef8529b`, so the shipped binary's `id name` says `Stockfish 19` (release builds omit the SHA — `src/misc.cpp:145`) while `/tmp/opencode/offline-test`'s build embedded `a2f963bf`. **`engine_info()` never reveals the SHA on a release tag**, so the binary cannot self-identify the fork. Consequence for FOUND-01: the fork identity must be declared in `NOTICE`/`PROVENANCE.md`, never inferred from a running engine's `id name`. |
+| **Secrets / env vars** | None. No `.env`, no CI secrets, no SOPS. The build reads only `GIT_SHA`/`GIT_DATE`/`GIT_DIFFINDEX` which the Makefile derives (`src/Makefile:915-917`) and caches to `src/.build_*.txt` (**gitignored**: `.gitignore:7-9`). | None. But **note the consequence**: the cached `.build_sha.txt` currently holds `f3c88695` and `misc.o` was compiled with `-DGIT_SHA=f3c88695`, so the shipped binary's `id name` says `Stockfish 19` (release builds omit the SHA — `src/misc.cpp:145`) while `/tmp/opencode/offline-test`'s build embedded `a2f963bf`. **`engine_info()` never reveals the SHA on a release tag**, so the binary cannot self-identify the fork. Consequence for FOUND-01: the fork identity must be declared in `NOTICE`/`PROVENANCE.md`, never inferred from a running engine's `id name`. |
 | **Build artefacts / installed packages** | (a) `src/*.o` and `src/stockfish` are present and stale relative to any upcoming `engine.cpp` edit; (b) `src/temp_builds` is absent but created by universal builds; (c) `src/.depend`, `src/.build_*.txt` are gitignored and will go stale; (d) `vendor/chess/__pycache__` must not be committed. | (a) `make -C src objclean` before the reproducible-build proof so both runs start clean; (b) leave absent; (c) delete before archiving; (d) add `vendor/**/__pycache__/` to `.gitignore` (the existing bare `__pycache__/` pattern at `.gitignore:23` already covers nested paths, since a gitignore pattern containing no slash matches at every level). |
 
 **The canonical question, answered:** *After every file in the repo is updated, what runtime systems still have the old string cached, stored, or registered?* → **Only the compiled `.o` files and the linked binary**, because the engine has no persistent state. Consequence for the plan: the offline-build proof must start from `objclean` (or a fresh clone), otherwise it proves nothing but that `make` skipped work.
@@ -383,7 +383,7 @@ sys.exit(0 if rc == 0 else "FAIL: docs/ committed after first implementation com
 **What goes wrong:** On a release tag, `engine_version_info()` emits `Stockfish 19` with **no** `-SHA` suffix (`src/misc.cpp:145`: `if constexpr (version == "dev")` guards the whole git block), so the panel cannot tie the shipped binary to a commit by asking the binary.
 **Why it happens:** Upstream deliberately drops the SHA for release builds.
 **How to avoid:** Do not edit `misc.cpp` in Phase 1 (that would be a touched file needing a GPL modification line for no compliance gain). Instead: `NOTICE` records `sha256` of the exact shipped binary and of `src/stockfish`'s build inputs; `doctor.py` prints `--license`-style identity plus the binary hash; and the runbook verifies the hash. If a self-identifying string is wanted later, Phase 4 does it — with the GPL line.
-**Warning signs:** `strings src/stockfish | grep <sha8>` returns nothing (verified: `grep -c "0ef8529b"` → 0).
+**Warning signs:** `strings src/stockfish | grep <sha8>` returns nothing (verified: `grep -c "f3c88695"` → 0).
 
 ### Pitfall 4: `Copying.txt` / `AUTHORS` drift is undetectable without a baseline
 **What goes wrong:** Someone "cleans" `AUTHORS`, or an editor normalises line endings (`.gitattributes:2` sets `* text=auto eol=lf`, which rewrites on checkout on some setups), and there is no way to notice before the panel does.
@@ -550,7 +550,7 @@ Directives extracted from `AGENTS.md` (which is a generated mirror of `PROJECT.m
 
 | ID | Description | Research Support |
 |----|-------------|------------------|
-| FOUND-01 | Real `git clone --branch sf_19` with upstream history + tag `base-sf19`; `NOTICE` records URL, full SHA, tag, fork date, modified files, build command, `ARCH`, compiler version, bench node count | History verified present (7,252 upstream commits, not shallow, tags `sf_19` and `base-sf19` both at `edb0d9db…`). `NOTICE` field list + `check_notice.py` skeleton in Pattern 1. Bench constant **2,497,913**. `ARCH=x86-64-avxvnni` (from `get_native_properties.sh` via `ARCH=native`); compiler string `g++ (GNUC) 16.2.1 on Linux` from `./stockfish compiler`. |
+| FOUND-01 | Real `git clone --branch sf_19` with upstream history + tag `base-sf19`; `NOTICE` records URL, full SHA, tag, fork date, modified files, build command, `ARCH`, compiler version, bench node count | History verified present (7,252 upstream commits, not shallow, tags `sf_19` and `base-sf19` both at `f879373d…`). `NOTICE` field list + `check_notice.py` skeleton in Pattern 1. Bench constant **2,497,913**. `ARCH=x86-64-avxvnni` (from `get_native_properties.sh` via `ARCH=native`); compiler string `g++ (GNUC) 16.2.1 on Linux` from `./stockfish compiler`. |
 | FOUND-02 | `Copying.txt`/`AUTHORS` byte-intact; every touched file keeps the GPLv3 header plus a dated modification line | Baseline is git, not a sidecar hash: `git rev-parse sf_19:Copying.txt` == `HEAD:Copying.txt` (`f288702d2fa16d3cdf0035b15a9fcbc552cd88e7`), same for `AUTHORS` (`b5ad83d591e343df95cf6b82ee27d8f7640f170a`). Exact modification-line format, touched-file list and `check_license.py` below. |
 | FOUND-03 | `PROVENANCE.md` declares NNUE name/size/SHA-256/origin, tablebase inventory, dependency manifest; net marked explicitly non-authored | Net identity fully verified (98,511,183 B, `1a298aa5…dfc2`, CC0-1.0, `export_net` round-trip identical). Field list + machine-checkable table below. |
 | FOUND-04 | Build works fully offline; `make net` before the event; tree archived; clean `unshare -n make -j` proven on the laptop | Full recipe verified end-to-end: fresh clone → `objclean` → `unshare -rn make -C src -j12 build` (65 s) → `bench` = 2,497,913 → byte-identical rebuild. `net.sh` returns 0 on failure (must not be the gate). Evidence artefact spec below. |
@@ -572,7 +572,7 @@ Use a **line-oriented `Key: value` format**, one field per line, no prose betwee
 
 Base project:                 https://github.com/official-stockfish/Stockfish
 Base tag:                     sf_19
-Base commit:                  edb0d9db6731067ec50ce619ff372b463bc4dd5d
+Base commit:                  f879373d916914de3a478aabb4226e6460c17d15
 Base commit date:             2026-09-05
 Fork date:                    2026-10-26
 Fork repository:              <URL, filled at FOUND-06>
@@ -1125,7 +1125,7 @@ Framework install: **none required** — `unittest` ships with CPython.
 
 Every claim tagged `[VERIFIED]` in this document rests on one of the three rows below. Source-code claims cite `file:line` and the values were read from the file in this session.
 
-- **Stockfish 19 source tree**, `sf_19` @ `edb0d9db6731067ec50ce619ff372b463bc4dd5d` — read directly this session: `src/engine.cpp:124-127,133,153-158,168,266`; `src/syzygy/tbprobe.h:64`; `src/syzygy/tbprobe.cpp:68,99,105,595,1521,1524,1682,1916-1926`; `src/ucioption.cpp:137-158`; `src/Makefile:1007,1100,1211`; `src/nnue/network.cpp:49-50`; `src/misc.cpp:57,145`; `scripts/net.sh:14-26,74,77`. Upstream project: `https://github.com/official-stockfish/Stockfish`.
+- **Stockfish 19 source tree**, `sf_19` @ `f879373d916914de3a478aabb4226e6460c17d15` — read directly this session: `src/engine.cpp:124-127,133,153-158,168,266`; `src/syzygy/tbprobe.h:64`; `src/syzygy/tbprobe.cpp:68,99,105,595,1521,1524,1682,1916-1926`; `src/ucioption.cpp:137-158`; `src/Makefile:1007,1100,1211`; `src/nnue/network.cpp:49-50`; `src/misc.cpp:57,145`; `scripts/net.sh:14-26,74,77`. Upstream project: `https://github.com/official-stockfish/Stockfish`.
 - **Live execution on this machine** — offline `unshare -rn make -C src -j12 build` (65 s), `bench` = 2,497,913, byte-identical rebuild (`077d3601…c4a79`), `export_net` round-trip identical, `SyzygyProbeLimit` guard patched+built and a 6-man directory rejected with exit 1, fastchess 2-game match and a real SPRT run producing an `LLR:` line.
 - **`git` object inspection** — 7,252 upstream commits reachable from `sf_19`, tree not shallow; `Copying.txt` blob `f288702d2fa16d3cdf0035b15a9fcbc552cd88e7` and `AUTHORS` blob `b5ad83d591e343df95cf6b82ee27d8f7640f170a` identical at `sf_19` and `HEAD`.
 - **`python-chess` 1.11.2 sdist**, sha256 `a8b43e5678fdb3000695bdaa573117ad683761e5ca38e591c4826eba6d25bb39` — vendored tree imported and exercised successfully.

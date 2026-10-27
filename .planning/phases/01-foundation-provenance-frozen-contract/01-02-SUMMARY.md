@@ -15,7 +15,7 @@ provides:
   - tools/check_contract_order.py (freeze-predates-implementation proof, repo-root argv)
   - tools/tests/test_contract.py (12 doc↔mock↔driver agreement + ordering tests)
   - evidence/01-contract-transcript.log (Task 1 exchange + Task 2 2-game session, 17 bestmove)
-affects: [Phase 2 console (parses exactly §5/§7), Phase 4 TM (fills §6 values, tm=custom-vMAJOR.MINOR), Phase 6 SPRT/logs, 01-03's first impl commit must postdate freeze 2fd4bf4f]
+affects: [Phase 2 console (parses exactly §5/§7), Phase 4 TM (fills §6 values, tm=custom-vMAJOR.MINOR), Phase 6 SPRT/logs, 01-03's first impl commit must postdate freeze bd349ec3]
 
 # Actuals (#2632) — pairs with the plan's `estimate` to calibrate future estimates.
 actuals:
@@ -40,7 +40,7 @@ key-files:
   modified: []
 
 key-decisions:
-  - "Freeze landed as ONE docs-only commit 2fd4bf4f containing exactly PROTOCOL.md + LOGBOOK.md (Task 1 committed PROTOCOL alone, Task 2's LOGBOOK was amended in — end state satisfies the Task 3 gate verbatim)"
+  - "Freeze landed as ONE docs-only commit bd349ec3 containing exactly PROTOCOL.md + LOGBOOK.md (Task 1 committed PROTOCOL alone, Task 2's LOGBOOK was amended in — end state satisfies the Task 3 gate verbatim)"
   - "CSV columns renamed to LOGBOOK §2 keys: move_no (not ply), engine_ms+wall_ms pair (not time_ms); mock_gui asserts wall_ms ≥ engine_ms per row (LOGBOOK §2.2)"
   - "mock_engine caps reported `time` under --delay-ms so the wall_ms ≥ engine_ms invariant is physically satisfiable in the demo run"
   - "check_contract_order.py scopes history to project commits (rev-list HEAD ^sf_19) — rev-list --all walks upstream sf_19 and false-fails; synthetic repos without sf_19 fall back to HEAD"
@@ -54,7 +54,7 @@ deviations:
   - "check_contract_order.py takes optional repo-root argv (plan said work on the repo; synthetic tests need isolation — pattern-matched on check_provenance.py's path argv)"
 
 must_be_informed:
-  - "Freeze commit is 2fd4bf4f — 01-03's src/engine.cpp patch MUST postdate it (check_contract_order.py will then flip from vacuous OK to a real ancestry OK; if it FAILs, the src patch landed on the wrong side)"
+  - "Freeze commit is bd349ec3 — 01-03's src/engine.cpp patch MUST postdate it (check_contract_order.py will then flip from vacuous OK to a real ancestry OK; if it FAILs, the src patch landed on the wrong side)"
   - "LOGBOOK §2.2 wall_ms ≥ engine_ms is asserted by mock_gui now; the Phase 2 console must inherit this invariant in its own logger"
   - "Ponder grammar frozen (§3.5) but Ponder=false until TM-13 (Phase 5)"
 ---
@@ -115,20 +115,20 @@ must_be_informed:
 
 | Req | Evidence |
 |---|---|
-| FOUND-05 (docs frozen in docs-only commit) | freeze `2fd4bf4f`, gate above |
+| FOUND-05 (docs frozen in docs-only commit) | freeze `bd349ec3`, gate above |
 | FOUND-05 (mocks complete a real search speaking the frozen literal) | 16-search session + committed transcript |
 | FOUND-05 (freeze provably predates implementation) | `check_contract_order.py` + 4 synthetic-repo tests |
 
 ## Commits
 
-- `2fd4bf4f` docs(01-02): freeze docs/PROTOCOL.md + docs/LOGBOOK.md (FOUND-05)
-- `17d52a4f` feat(01-02): contract mocks end-to-end (mock_engine + mock_gui)
-- `eb86704a` feat(01-02): ordering proof + contract regression tests
+- `bd349ec3` docs(01-02): freeze docs/PROTOCOL.md + docs/LOGBOOK.md (FOUND-05)
+- `df390fad` feat(01-02): contract mocks end-to-end (mock_engine + mock_gui)
+- `f38ab595` feat(01-02): ordering proof + contract regression tests
 
 ## Leftovers for later plans/phases
 
 - 01-03: first real impl commit (src/engine.cpp TB clamp) — MUST postdate
-  `2fd4bf4f`; checker flips from vacuous to real ancestry proof then.
+  `bd349ec3`; checker flips from vacuous to real ancestry proof then.
 - Phase 2 console implements `log_lint` (LOGBOOK §6) and the §7.3
   search_id discard; mocks already speak both sides.
 - Phase 4 TM fills §6 values and bumps `tm=custom-v1.0` → real version.

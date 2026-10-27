@@ -7,7 +7,7 @@ tags: [gplv3, provenance, offline-build, nnue, syzygy, notice, sha256]
 # Dependency graph
 requires:
   - phase: none
-    provides: sf_19 import (0ef8529b), vendored net (a2f963bf), stock Stockfish 19 build
+    provides: sf_19 import (f3c88695), vendored net (a2f963bf), stock Stockfish 19 build
 provides:
   - NOTICE with command-derived provenance fields + tools/check_notice.py machine gate
   - PROVENANCE.md (NNUE identity, TB section, dependency manifest) + tools/check_provenance.py
@@ -141,10 +141,10 @@ namespace build in `evidence/01-binary.sha256`.
 
 ## Commits
 
-- `345d1376` feat(01-01): NOTICE + licence gate end-to-end
-- `a84a87d7` feat(01-01): PROVENANCE.md + vendored python-chess pinned by tree
-- `273af4f1` feat(01-01): network-severed build proof + release/USB manifest
-- `59beaccd` fix(01-01): sync NOTICE project-commit with final evidence run
+- `9d0ba481` feat(01-01): NOTICE + licence gate end-to-end
+- `cfd31be5` feat(01-01): PROVENANCE.md + vendored python-chess pinned by tree
+- `f36c8fe6` feat(01-01): network-severed build proof + release/USB manifest
+- `b7b4b685` fix(01-01): sync NOTICE project-commit with final evidence run
 
 ## User setup (human steps produced by this plan)
 

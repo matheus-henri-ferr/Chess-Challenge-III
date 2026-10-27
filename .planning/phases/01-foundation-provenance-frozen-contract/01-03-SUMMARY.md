@@ -7,7 +7,7 @@ tags: [syzygy, tb-ceiling, doctor, sprt, fastchess, gate0, rule-4, rule-14]
 # Dependency graph
 requires:
   - plan: 01-01 (RELEASE/SHA256SUMS + evidence/01-offline-build.log + binary-hash precondition)
-  - plan: 01-02 (freeze commit 2fd4bf4f — first impl commit must postdate it; proven)
+  - plan: 01-02 (freeze commit bd349ec3 — first impl commit must postdate it; proven)
 provides:
   - Tablebases::TB_PROBE_LIMIT=5 + clamped option (default 5 min 0 max 5) + verify_tb_ceiling() attestation at go/search_clear/SyzygyPath-on-change + fatal exit on 6-man directory
   - tools/doctor.py (13-check startup pre-flight, --json, --strict-tb) + tools/tests/test_doctor.py (7 cases)
@@ -124,7 +124,7 @@ with the three corrections (space-form option token verified by running);
 | `grep '"option.Move Overhead=100"' docs/sprt.md` + `! grep 'option.Move_Overhead'` | both hold |
 | `sh tools/sprt.sh … ROUNDS=2` | `LLR: -0.02 … [0.00, 5.00]` |
 | `bash scripts/gate0.sh` (FULL, namespace build) | `GATE0 PASS` |
-| `python3 tools/check_contract_order.py` | freeze `2fd4bf4f` is ancestor of first impl commit `9738a679` — real (non-vacuous) proof now |
+| `python3 tools/check_contract_order.py` | freeze `bd349ec3` is ancestor of first impl commit `b12a3693` — real (non-vacuous) proof now |
 | `sh scripts/check_license.sh`, `check_notice.py`, `check_provenance.py` | all OK |
 
 ## Requirements coverage
@@ -137,10 +137,10 @@ with the three corrections (space-form option token verified by running);
 
 ## Commits
 
-- `9738a679` feat(01-03): Rule 4 TB ceiling — clamp, attest, exit on forbidden tablebase
-- `3fa911f5` feat(01-03): doctor.py startup pre-flight (LIMIT-04)
-- `1e4f0482` feat(01-03): fastchess + SPRT recipe + gate0.sh (PIPE-01)
-- `bae95409` fix(01-03): sync NOTICE binary hash with post-guard evidence run
+- `b12a3693` feat(01-03): Rule 4 TB ceiling — clamp, attest, exit on forbidden tablebase
+- `3d7d6791` feat(01-03): doctor.py startup pre-flight (LIMIT-04)
+- `724b3174` feat(01-03): fastchess + SPRT recipe + gate0.sh (PIPE-01)
+- `626bd400` fix(01-03): sync NOTICE binary hash with post-guard evidence run
 
 ## Leftovers for later plans/phases
 

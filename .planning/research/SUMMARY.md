@@ -89,7 +89,7 @@ On a ponder miss the console sends `stop`; the engine still owes — and will se
 
 ### Recommended Stack
 
-Pin **Stockfish 19 (`sf_19`, 2026-09-05)** — never a nightly, never master. `sf_19` has no `timeAdvantage` clause at all, while master added one plus a different default net (`nn-c9e480e92425.nnue` vs `nn-1a298aa575a0.nnue`); a moving target makes the provenance declaration and the net name match unverifiable. The clone must be a real `git clone --branch sf_19` with history retained and tagged `base-sf19` — the reference SHA is `edb0d9db6731067ec50ce619ff372b463bc4dd5d`, to be verified at clone time rather than copied blind.
+Pin **Stockfish 19 (`sf_19`, 2026-09-05)** — never a nightly, never master. `sf_19` has no `timeAdvantage` clause at all, while master added one plus a different default net (`nn-c9e480e92425.nnue` vs `nn-1a298aa575a0.nnue`); a moving target makes the provenance declaration and the net name match unverifiable. The clone must be a real `git clone --branch sf_19` with history retained and tagged `base-sf19` — the reference SHA is `f879373d916914de3a478aabb4226e6460c17d15`, to be verified at clone time rather than copied blind.
 
 The console is Python 3.12 + `python-chess` 1.11.2 (GPL-3.0-or-later, zero runtime dependencies, vendored so no `pip` at the venue). The harness is **fastchess v1.8.2-alpha** (MIT, `make -j`, no external deps, pentanomial SPRT, `-recover`), not cutechess-cli (Qt ≥ 6.8 is an offline-install risk and it lags at high concurrency). Tablebases are 3-4-5 Syzygy only (939 MiB, 290 files) — **downloaded, not generated**. No GPU; NNUE inference on CPU is the right shape and a GPU adds thermal risk for nothing.
 
@@ -460,7 +460,7 @@ Open **organizer questions** to resolve before Phase 5 (they change the design, 
 
 - `docs/competition-rules.md` — verbatim organizer FAQ, Rules 1–15. **Authoritative for every compliance requirement and exclusion in this document.**
 - `.planning/PROJECT.md` — framing, out-of-scope decisions, three-front split, core value (clock + tiebreak).
-- **Stockfish `sf_19`** (`edb0d9db6731067ec50ce619ff372b463bc4dd5d`, 2026-09-05): `src/timeman.{h,cpp}`, `search.{h,cpp}`, `uci.cpp`, `engine.cpp`, `thread.cpp`, `tt.cpp`, `position.cpp`, `syzygy/tbprobe.cpp`, `evaluate.h`, `nnue/network.cpp`, `universal/nnue_embed.cpp`, `Makefile`, `scripts/net.sh`, `Copying.txt`, `AUTHORS` — plus an actual build, `bench`, and a 15+10 run on this machine.
+- **Stockfish `sf_19`** (`f879373d916914de3a478aabb4226e6460c17d15`, 2026-09-05): `src/timeman.{h,cpp}`, `search.{h,cpp}`, `uci.cpp`, `engine.cpp`, `thread.cpp`, `tt.cpp`, `position.cpp`, `syzygy/tbprobe.cpp`, `evaluate.h`, `nnue/network.cpp`, `universal/nnue_embed.cpp`, `Makefile`, `scripts/net.sh`, `Copying.txt`, `AUTHORS` — plus an actual build, `bench`, and a 15+10 run on this machine.
 - **Stockfish `master`** (`ff3a6c50`, 2026-10-25) — used only to confirm post-`sf_19` drift (`timeAdvantage` addition, different default net).
 - UCI specification, April 2006 (Huber / Meyer-Kahlen) — `go ponder` semantics ("the last move in the position string is the ponder move"), the `bestmove` obligation, `setoption` timing.
 - `python-chess` 1.11.2 source (`chess/engine.py`, `chess/polyglot.py`, `chess/syzygy.py`) and docs — `parse_uci`/`InvalidMoveError`, `INFO_ALL`, `time` in seconds, `lowerbound`/`upperbound`, `play()` defaulting to `INFO_NONE`, the naive ponder clock adjustment, reader-only Polyglot.

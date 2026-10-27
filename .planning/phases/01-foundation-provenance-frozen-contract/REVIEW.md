@@ -114,7 +114,7 @@ def close(self):
 ### IN-03: unused constant BASE_SHA in check_notice.py
 
 **File:** `tools/check_notice.py:31`
-**Issue:** `BASE_SHA = "edb0d9db..."` defined, never referenced — the live value is re-derived via `git rev-parse sf_19` (:58). Stale duplicate of a provenance literal invites drift.
+**Issue:** `BASE_SHA = "f879373d..."` defined, never referenced — the live value is re-derived via `git rev-parse sf_19` (:58). Stale duplicate of a provenance literal invites drift.
 **Fix:** Delete it (the comment on :54-58 of NOTICE explains why it is derived, not remembered).
 
 ### IN-04: mock_gui.py docstring claims legality checking via `chess` — no such import or check exists

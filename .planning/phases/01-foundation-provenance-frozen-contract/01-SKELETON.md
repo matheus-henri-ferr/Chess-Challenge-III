@@ -13,7 +13,7 @@ Concretely: an auditor on the match laptop, with the network severed, rebuilds t
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| Engine base | Stockfish 19, tag `sf_19` = `edb0d9db6731067ec50ce619ff372b463bc4dd5d`, real clone with full 7,252-commit history | Rule 1 needs a citable origin commit; a copy or a shallow clone cannot be declared to the panel. Tag `base-sf19` marks our branch point. |
+| Engine base | Stockfish 19, tag `sf_19` = `f879373d916914de3a478aabb4226e6460c17d15`, real clone with full 7,252-commit history | Rule 1 needs a citable origin commit; a copy or a shallow clone cannot be declared to the panel. Tag `base-sf19` marks our branch point. |
 | Build command | `make -C src -j$(nproc) build` — the only one | There is no root Makefile, and `make -C src` defaults to `help:` (`src/Makefile:1007`), exiting 0 having built nothing: the most dangerous failure signature available. |
 | Offline proof | Build inside `unshare -n` (fallback `unshare -rn`), choice recorded in `evidence/01-offline-build.log` | Rule 14 is retroactive. `make net` exits 0 on a failed fetch (`scripts/net.sh:74` returns 1, `:77` discards it), so only a full build + `bench` + `export_net` `cmp` proves offline. |
 | Evaluation net | Official `nn-1a298aa575a0.nnue`, 98,511,183 B, sha256 `1a298aa575a085434d29027978dc36867fe9c5bcea9376654b7a8eba1e52dfc2`, committed and embedded | Vendored in git so the clone builds with no network; CC0-1.0 needs no attribution but Rule 15 forbids presenting it as ours — hence the explicit non-authorship marker. |

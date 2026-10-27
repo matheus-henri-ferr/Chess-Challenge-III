@@ -4,7 +4,7 @@
 **Researched:** 2026-10-26
 **Confidence:** HIGH for rule-derived and source-verified claims; MEDIUM for simulation and judge-behavior claims; LOW for field composition (no data on the actual opponent pool).
 
-> Every pitfall below is tied to a numbered rule in `docs/competition-rules.md` or to a documented competitive dynamic (human latency, clock ownership, tiebreak arithmetic). Stockfish behavior was verified against the pinned release `sf_19` (`edb0d9db6731067ec50ce619ff372b463bc4dd5d`, 2026-09-05) and master `ff3a6c50` (2026-10-25). Where `sf_19` and master differ, it is called out.
+> Every pitfall below is tied to a numbered rule in `docs/competition-rules.md` or to a documented competitive dynamic (human latency, clock ownership, tiebreak arithmetic). Stockfish behavior was verified against the pinned release `sf_19` (`f879373d916914de3a478aabb4226e6460c17d15`, 2026-09-05) and master `ff3a6c50` (2026-10-25). Where `sf_19` and master differ, it is called out.
 
 ---
 
@@ -168,7 +168,7 @@ The accreditation form says "Stockfish 17" or "latest"; the fork was imported fr
 Teams download a release zip, not a git clone; they rebase/squash for a clean history; they update mid-project and lose track of which upstream state they forked.
 
 **How to avoid:**
-- Pin a specific base. As of research: release `sf_19` = `edb0d9db6731067ec50ce619ff372b463bc4dd5d` (published 2026-09-05); master = `ff3a6c508ed731f0dcf253f4ddf646df19a62f84` (2026-10-25). Prefer the release tag for reproducibility; if you need post-release fixes, pin the master SHA and say so.
+- Pin a specific base. As of research: release `sf_19` = `f879373d916914de3a478aabb4226e6460c17d15` (published 2026-09-05); master = `ff3a6c508ed731f0dcf253f4ddf646df19a62f84` (2026-10-25). Prefer the release tag for reproducibility; if you need post-release fixes, pin the master SHA and say so.
 - Keep the full upstream history and tag `base-sf19`.
 - Record the SHA, date, URL, and the exact build recipe (compiler, flags, net file hash) in `PROVENANCE.md` **and** in the accreditation form.
 - If you merge upstream later, record the new base and the merge commit; update the declaration if the submitted version changes.
@@ -214,7 +214,7 @@ P1 + P7 rehearsal.
 #### B4. Model-weight provenance undocumented — and the offline build downloads a net
 
 **What goes wrong:**
-The default network is embedded in the binary, so it is invisible in the repo. The pinned base (`sf_19`, commit `edb0d9db`) names it `nn-1a298aa575a0.nnue`; current master (`ff3a6c50`) names it `nn-c9e480e92425.nnue`. The team swaps in a "stronger net" from a forum without recording where it came from, or modifies `EvalFileDefaultName` and forgets. Rule 15 requires an origin declaration for weights; downloaded third-party weights do not count as authorship. Separately, Stockfish's Makefile has a `net` target that downloads the net during build; on the venue laptop with Wi-Fi off, a clean build fails.
+The default network is embedded in the binary, so it is invisible in the repo. The pinned base (`sf_19`, commit `f879373d`) names it `nn-1a298aa575a0.nnue`; current master (`ff3a6c50`) names it `nn-c9e480e92425.nnue`. The team swaps in a "stronger net" from a forum without recording where it came from, or modifies `EvalFileDefaultName` and forgets. Rule 15 requires an origin declaration for weights; downloaded third-party weights do not count as authorship. Separately, Stockfish's Makefile has a `net` target that downloads the net during build; on the venue laptop with Wi-Fi off, a clean build fails.
 
 **Why it happens:**
 The net is embedded, so it feels like part of the compiler; builds are done once at home with network and never tested offline.
@@ -1225,7 +1225,7 @@ If there is a sixth: **guard the book and tablebase boundaries (E1, E3).** They 
 ## Sources
 
 - `docs/competition-rules.md` — III Chess Challenge FAQ, verbatim; rules 1–15 (authoritative for this project).
-- Stockfish release `sf_19`, tag commit `edb0d9db6731067ec50ce619ff372b463bc4dd5d` (published 2026-09-05): `src/timeman.cpp`, `src/timeman.h`, `src/engine.cpp`, `src/uci.cpp`, `src/search.cpp`, `src/thread.cpp`, `src/tt.cpp`, `src/position.cpp`, `src/syzygy/tbprobe.cpp`, `src/Makefile`, `src/evaluate.h`, `src/universal/nnue_embed.cpp`.
+- Stockfish release `sf_19`, tag commit `f879373d916914de3a478aabb4226e6460c17d15` (published 2026-09-05): `src/timeman.cpp`, `src/timeman.h`, `src/engine.cpp`, `src/uci.cpp`, `src/search.cpp`, `src/thread.cpp`, `src/tt.cpp`, `src/position.cpp`, `src/syzygy/tbprobe.cpp`, `src/Makefile`, `src/evaluate.h`, `src/universal/nnue_embed.cpp`.
 - Stockfish `master` at `ff3a6c508ed731f0dcf253f4ddf646df19a62f84` (2026-10-25): used to confirm the post-`sf_19` `timeAdvantage` addition in `timeman.cpp` and the current embedded-net build path.
 - GNU General Public License v3, `Copying.txt` (Stockfish distribution): §§4, 5, 6.
 - Stockfish `README.md`, license section: requirement to include the license and the full source (or a pointer) for the exact binary.

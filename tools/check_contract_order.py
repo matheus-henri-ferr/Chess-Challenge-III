@@ -94,7 +94,7 @@ def main() -> int:
 
     impl_shas = []
     # Project commits only — upstream sf_19 history touches src/ endlessly and
-    # is not ours to gate (the import commit 0ef8529b grafts it, HEAD ^sf_19
+    # is not ours to gate (the import commit f3c88695 grafts it, HEAD ^sf_19
     # skips it). Synthetic repos without sf_19 fall back to plain HEAD.
     base = "HEAD ^sf_19" if git("rev-parse", "--verify", "-q",
                                 "sf_19", check=False).strip() else "HEAD"

@@ -75,7 +75,7 @@ deferred:
 **Phase Goal:** Every unrecoverable compliance and contract decision is fixed and provable on day 0: licence/provenance gates, frozen console protocol, Rule 4 tablebase ceiling enforced in code, and a reproducible offline build — so no Phase-2+ work can silently invalidate them.
 **Verified:** 2026-10-27T15:06:07Z
 **Status:** PASS (with 3 open human items — G1 resolved; no code gaps remain)
-**Re-verification:** Yes — after gap closure (fix commit 66d7b078)
+**Re-verification:** Yes — after gap closure (fix commit 811cf10e)
 
 ## Goal Achievement
 
@@ -83,19 +83,19 @@ deferred:
 
 | # | Requirement | Verdict | Evidence (all re-derived live, not from SUMMARY) |
 |---|-------------|---------|--------------------------------------------------|
-| 1 | FOUND-01 — real sf_19 fork, NOTICE complete & command-derived | ✅ PASS (carried) | Prior live evidence stands: `git rev-parse sf_19` = `edb0d9db…` == NOTICE Base commit; `python3 tools/check_notice.py` → `OK NOTICE` re-run at 66d7b078 (re-derives base SHA, bench 2497913, net SHA, Modified-files vs `git diff sf_19`) |
-| 2 | FOUND-02 — Copying.txt/AUTHORS byte-intact, dated mod lines | ✅ PASS (carried) | `git diff sf_19 HEAD -- Copying.txt AUTHORS` empty; dated mod lines in src/engine.cpp:19, src/engine.h:19, src/syzygy/tbprobe.h:19; 66d7b078 touches none of them |
-| 3 | FOUND-03 — PROVENANCE.md: net identity, NOT AUTHORED, manifest | ✅ PASS (carried) | check_provenance → `OK PROVENANCE` re-run at 66d7b078; net/TB/dep manifest unchanged |
-| 4 | FOUND-04 — reproducible offline build, net embedded | ✅ PASS (carried) | evidence/01-offline-build.log @ 6a64b1fb complete (unshare -rn, net cmp identical, bench 2497913, zero downloads); binary hash 527fa7ac… still matches live src/stockfish (unchanged by 66d7b078 — Python-only commit); match-laptop repro remains open human item |
-| 5 | FOUND-05 — frozen docs pre-implementation + **both mocks run end-to-end** | ✅ **PASS (G1 RESOLVED)** | Docs part carried: freeze commit 2fd4bf4f docs-only, predates impl, `check_contract_order.py` → `OK CONTRACT ORDER` re-run. Mocks part now live-verified at HEAD (66d7b078): `python3 tools/mock_gui.py --engine tools/mock_engine.py --games 2 --max-plies 4 --tc 15:10 --require-tm` → **`OK mock_gui: 8 searches across 2 game(s)`, rc=0**; `python3 tools/mock_gui.py --engine ./src/stockfish --games 1 --max-plies 2 --tc 0.05:0.01` → **`OK mock_gui: 2 searches across 1 game(s)`, rc=0** (the 5/5-deterministic deadlock repro now passes). Code inspection: readline() rebuilt on `os.read` raw-fd + own buffer with `bufsize=0` (no TextIO to starve select); `bestmove_of()` takes the FIRST token ('bestmove e2e4 ponder c7c5' no longer corrupts the move); go_line staticmethod pins winc/binc 10000 per frozen §3.1; mock_engine reports real elapsed time. ROADMAP SC3 met by the code at HEAD |
+| 1 | FOUND-01 — real sf_19 fork, NOTICE complete & command-derived | ✅ PASS (carried) | Prior live evidence stands: `git rev-parse sf_19` = `f879373d…` == NOTICE Base commit; `python3 tools/check_notice.py` → `OK NOTICE` re-run at 811cf10e (re-derives base SHA, bench 2497913, net SHA, Modified-files vs `git diff sf_19`) |
+| 2 | FOUND-02 — Copying.txt/AUTHORS byte-intact, dated mod lines | ✅ PASS (carried) | `git diff sf_19 HEAD -- Copying.txt AUTHORS` empty; dated mod lines in src/engine.cpp:19, src/engine.h:19, src/syzygy/tbprobe.h:19; 811cf10e touches none of them |
+| 3 | FOUND-03 — PROVENANCE.md: net identity, NOT AUTHORED, manifest | ✅ PASS (carried) | check_provenance → `OK PROVENANCE` re-run at 811cf10e; net/TB/dep manifest unchanged |
+| 4 | FOUND-04 — reproducible offline build, net embedded | ✅ PASS (carried) | evidence/01-offline-build.log @ 732ba367 complete (unshare -rn, net cmp identical, bench 2497913, zero downloads); binary hash 527fa7ac… still matches live src/stockfish (unchanged by 811cf10e — Python-only commit); match-laptop repro remains open human item |
+| 5 | FOUND-05 — frozen docs pre-implementation + **both mocks run end-to-end** | ✅ **PASS (G1 RESOLVED)** | Docs part carried: freeze commit bd349ec3 docs-only, predates impl, `check_contract_order.py` → `OK CONTRACT ORDER` re-run. Mocks part now live-verified at HEAD (811cf10e): `python3 tools/mock_gui.py --engine tools/mock_engine.py --games 2 --max-plies 4 --tc 15:10 --require-tm` → **`OK mock_gui: 8 searches across 2 game(s)`, rc=0**; `python3 tools/mock_gui.py --engine ./src/stockfish --games 1 --max-plies 2 --tc 0.05:0.01` → **`OK mock_gui: 2 searches across 1 game(s)`, rc=0** (the 5/5-deterministic deadlock repro now passes). Code inspection: readline() rebuilt on `os.read` raw-fd + own buffer with `bufsize=0` (no TextIO to starve select); `bestmove_of()` takes the FIRST token ('bestmove e2e4 ponder c7c5' no longer corrupts the move); go_line staticmethod pins winc/binc 10000 per frozen §3.1; mock_engine reports real elapsed time. ROADMAP SC3 met by the code at HEAD |
 | 6 | FOUND-06 — repo public/panel access + USB archive started | ⚠️ HUMAN | Carried: dry-run artifacts verified (RELEASE/SHA256SUMS committed, archive_usb.sh guards, panel URL in PROVENANCE §5). Panel confirmation + physical USB = open human items |
-| 7 | LIMIT-01 — SyzygyProbeLimit forced to 5, fatal on 6-man | ✅ PASS (carried) | Live-verified pre-fix: option line `default 5 min 0 max 5`, clamp+attest, planted KQRRBvK.rtbw/.rtbz → exit 1, KQvK accepted; bench unchanged at 66d7b078 confirms engine behaviour intact |
+| 7 | LIMIT-01 — SyzygyProbeLimit forced to 5, fatal on 6-man | ✅ PASS (carried) | Live-verified pre-fix: option line `default 5 min 0 max 5`, clamp+attest, planted KQRRBvK.rtbw/.rtbz → exit 1, KQvK accepted; bench unchanged at 811cf10e confirms engine behaviour intact |
 | 8 | LIMIT-04 — doctor.py fails on remote/relative asset paths | ✅ PASS (carried) | Live-verified: 13 checks exit 0, remote/`~` assets exit 1 with named reason; 7/7 test_doctor in the 31/31 run |
 | 9 | PIPE-01 — fastchess installed + SPRT smoke with LLR line + documented recipe | ✅ PASS (carried) | fastchess alpha 1.8.2; LLR line in results + evidence log; docs/sprt.md normative recipe; book hashes OK |
 
 **Score:** 8/9 requirements verified — 1 human (FOUND-06); zero FAILED. G1 gap closed.
 
-### Re-verification: What the G1 fix touched (66d7b078 — all re-run live)
+### Re-verification: What the G1 fix touched (811cf10e — all re-run live)
 
 | Check | Command | Result | Status |
 |-------|---------|--------|--------|
@@ -112,10 +112,10 @@ Fix claims confirmed in code at HEAD (tools/mock_gui.py, tools/mock_engine.py, t
 |-------|--------|--------|
 | `bash scripts/gate0.sh --skip-build` | rc=0, all gates green | ✓ PASS |
 | `python3 tools/check_notice.py` | `OK NOTICE` | ✓ PASS |
-| `python3 tools/check_contract_order.py` | `OK CONTRACT ORDER: freeze 2fd4bf4f is ancestor of first implementation commit 6a64b1fb` | ✓ PASS |
+| `python3 tools/check_contract_order.py` | `OK CONTRACT ORDER: freeze bd349ec3 is ancestor of first implementation commit 732ba367` | ✓ PASS |
 | `python3 tools/check_provenance.py` | `OK PROVENANCE` | ✓ PASS |
-| Working tree vs 66d7b078 | clean except this VERIFICATION.md | ✓ PASS |
-| Binary hash | src/stockfish untouched by 66d7b078 (Python-only commit) — 527fa7ac… carried | ✓ PASS |
+| Working tree vs 811cf10e | clean except this VERIFICATION.md | ✓ PASS |
+| Binary hash | src/stockfish untouched by 811cf10e (Python-only commit) — 527fa7ac… carried | ✓ PASS |
 
 No regression found. Carried PASS verdicts for FOUND-01…04, LIMIT-01, LIMIT-04, PIPE-01 rest on prior live evidence plus fresh checker/gate0 re-runs; bench re-confirmed.
 
@@ -139,7 +139,7 @@ No regression found. Carried PASS verdicts for FOUND-01…04, LIMIT-01, LIMIT-04
 | IN-09 string-prefix dispatch on wording | ✅ Fixed | shared constexpr |
 | IN-10 mock_engine fen doesn't reset moves | ✅ Fixed | `self.moves = []` |
 
-**15/15 fixed. WR-02's companion defect (G1) resolved in 66d7b078.**
+**15/15 fixed. WR-02's companion defect (G1) resolved in 811cf10e.**
 
 ### Required Artifacts
 
@@ -147,7 +147,7 @@ No regression found. Carried PASS verdicts for FOUND-01…04, LIMIT-01, LIMIT-04
 |----------|----------|--------|---------|
 | NOTICE | complete provenance fields | ✓ VERIFIED | check_notice OK re-run; binary hash matches |
 | PROVENANCE.md | net/TB/deps declarations | ✓ VERIFIED | check_provenance OK |
-| docs/PROTOCOL.md | frozen console↔engine contract | ✓ VERIFIED | 11 sections; §3.1 frozen go literal; docs-only commit 2fd4bf4f |
+| docs/PROTOCOL.md | frozen console↔engine contract | ✓ VERIFIED | 11 sections; §3.1 frozen go literal; docs-only commit bd349ec3 |
 | docs/LOGBOOK.md | frozen Rule-9 log spec | ✓ VERIFIED | 8 mandatory fields + score_white + src= variants + log_lint §6 |
 | tools/mock_engine.py | contract-speaking UCI mock | ✓ VERIFIED | drives full session inside RuntimeEndToEndTests + prior live handshake/search |
 | tools/mock_gui.py | contract driver | ✓ VERIFIED (was BROKEN) | end-to-end vs mock AND real stockfish, rc=0 both; os.read readline at HEAD |
@@ -155,8 +155,8 @@ No regression found. Carried PASS verdicts for FOUND-01…04, LIMIT-01, LIMIT-04
 | tools/doctor.py | 13-check startup pre-flight | ✓ VERIFIED | prior live PASS/FAIL/SKIP + --json; 7/7 tests in 31/31 |
 | tools/offline_build.sh → evidence log | network-severed build proof | ✓ VERIFIED | log complete, hashes identical, bench 2497913 |
 | tools/sprt.sh + docs/sprt.md | audit-trailed SPRT | ✓ VERIFIED | LLR line in results + evidence |
-| scripts/gate0.sh | single phase gate | ✓ VERIFIED | `--skip-build` rc=0 re-run at 66d7b078 |
-| scripts/check_license.sh | GPL header gate | ✓ VERIFIED | exit 0 (prior live; inputs untouched by 66d7b078) |
+| scripts/gate0.sh | single phase gate | ✓ VERIFIED | `--skip-build` rc=0 re-run at 811cf10e |
+| scripts/check_license.sh | GPL header gate | ✓ VERIFIED | exit 0 (prior live; inputs untouched by 811cf10e) |
 | scripts/archive_usb.sh | USB archiver | ✓ VERIFIED | dry-run manifest; IN-07 guard |
 | vendor/chess/ | python-chess 1.11.2 vendored | ✓ VERIFIED | import check prior live; untouched |
 | tools/fastchess-linux-x86-64/ | fastchess 1.8.2 + MIT source | ✓ VERIFIED | alpha 1.8.2 prior live |
@@ -188,14 +188,14 @@ No regression found. Carried PASS verdicts for FOUND-01…04, LIMIT-01, LIMIT-04
 | gate0 (skip-build) | `bash scripts/gate0.sh --skip-build` | rc=0 | ✓ PASS |
 | check_notice / contract order / provenance | three checkers | OK × 3 | ✓ PASS |
 
-(Carried prior-live spot-checks — option line, clamp+attest, 6-man fatal WDL/DTZ, 5-man accept, doctor rejects, book hash, fastchess version — all inputs untouched by 66d7b078.)
+(Carried prior-live spot-checks — option line, clamp+attest, 6-man fatal WDL/DTZ, 5-man accept, doctor rejects, book hash, fastchess version — all inputs untouched by 811cf10e.)
 
 ### Probe Execution
 
 | Probe | Command | Result | Status |
 |-------|---------|--------|--------|
-| gate0 (phase gate, --skip-build) | `bash scripts/gate0.sh --skip-build` | exit 0 at 66d7b078 | PASS |
-| gate0 full (namespace build) | covered by committed evidence/01-offline-build.log @ 6a64b1fb (unshare -rn, bench 2497913, identical hashes); src/ unchanged since | — | PASS (evidence-backed) |
+| gate0 (phase gate, --skip-build) | `bash scripts/gate0.sh --skip-build` | exit 0 at 811cf10e | PASS |
+| gate0 full (namespace build) | covered by committed evidence/01-offline-build.log @ 732ba367 (unshare -rn, bench 2497913, identical hashes); src/ unchanged since | — | PASS (evidence-backed) |
 
 ### Requirements Coverage
 
@@ -208,7 +208,7 @@ All 9 Phase-1 requirement IDs (FOUND-01…06, LIMIT-01, LIMIT-04, PIPE-01) are c
 | tools/mock_gui.py | 19 | docstring still says "(ponder variant under --ponder)" but IN-01 removed the flag | ℹ️ Info | Minor doc drift, carried |
 | tools/check_contract_order.py | ~93-103 | "first implementation commit" label selects the NEWEST impl commit (rev-list newest-first) | ℹ️ Info | Verdict sound under linear history; misnomer only |
 
-Former 🛑 Blocker (select()-gated readline deadlock) RESOLVED in 66d7b078 — no blocker remains. No TBD/FIXME/XXX markers in phase-touched files.
+Former 🛑 Blocker (select()-gated readline deadlock) RESOLVED in 811cf10e — no blocker remains. No TBD/FIXME/XXX markers in phase-touched files.
 
 ### Human Verification Required
 
@@ -234,7 +234,7 @@ Three open items, all environmental (unchanged from initial verification):
 
 ### Gaps Summary
 
-None. G1 (mock_gui TextIO/select starvation deadlock) is closed by commit 66d7b078: readline() now owns its buffer over raw os.read (TextIO eliminated via bufsize=0), so select() can never starve on bytes already consumed; bestmove parsing no longer corrupts 'bestmove e2e4 ponder c7c5'; go lines match the frozen §3.1 literal exactly; and the suite now spawns the real driver↔engine pair (RuntimeEndToEndTests) — the coverage hole that let the regression ship is itself closed. Both the 2-game mock session and the real-stockfish session that deterministically deadlocked now complete with rc=0; 31/31 tests; bench unchanged at 2497913; gate0 and all three checkers re-run green. Status is `human_needed` solely for the three environmental items (GitHub panel access, physical USB archive, match-laptop offline build) — no code work remains for Phase 1.
+None. G1 (mock_gui TextIO/select starvation deadlock) is closed by commit 811cf10e: readline() now owns its buffer over raw os.read (TextIO eliminated via bufsize=0), so select() can never starve on bytes already consumed; bestmove parsing no longer corrupts 'bestmove e2e4 ponder c7c5'; go lines match the frozen §3.1 literal exactly; and the suite now spawns the real driver↔engine pair (RuntimeEndToEndTests) — the coverage hole that let the regression ship is itself closed. Both the 2-game mock session and the real-stockfish session that deterministically deadlocked now complete with rc=0; 31/31 tests; bench unchanged at 2497913; gate0 and all three checkers re-run green. Status is `human_needed` solely for the three environmental items (GitHub panel access, physical USB archive, match-laptop offline build) — no code work remains for Phase 1.
 
 ---
 
