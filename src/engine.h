@@ -16,6 +16,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+// Modified by ChessChallendIII on 2026-10-26: declare verify_tb_ceiling() so the Rule 4 tablebase ceiling is attested on every search. See NOTICE and PROVENANCE.md.
+
 #ifndef ENGINE_H_INCLUDED
 #define ENGINE_H_INCLUDED
 

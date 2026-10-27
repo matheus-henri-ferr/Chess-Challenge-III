@@ -16,6 +16,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+// Modified by ChessChallendIII on 2026-10-26: enforce the Rule 4 five-piece tablebase ceiling. See NOTICE and PROVENANCE.md.
+
 #include "engine.h"
 
 #include <algorithm>

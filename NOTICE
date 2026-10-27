@@ -1,0 +1,58 @@
+# NOTICE — ChessChallendIII
+
+Base project:                 https://github.com/official-stockfish/Stockfish
+Base tag:                     sf_19
+Base commit:                  edb0d9db6731067ec50ce619ff372b463bc4dd5d
+Base commit date:             2026-09-05
+Fork date:                    2026-10-26
+Fork repository:              https://github.com/matheus-henri-ferr/Chess-Challenge-III
+License:                      GPL-3.0-or-later (see Copying.txt)
+Project commit (this build):  6927bca7d889bd41dfbf7a436417d1d796aede76
+Build command:                make -C src -j12 build
+Build profile:                build
+ARCH:                         x86-64-avxvnni
+Compiler:                     g++ (GNUC) 16.2.1 on Linux
+Compilation settings:         64bit VNNI BMI2 AVX2 SSE41 SSSE3 SSE2 POPCNT
+Bench nodes:                  2497913
+Binary sha256:                770466cd9aa55fd6e4fbad313a8d65cf1c6bbef2368b21e33af3408759db4f6b
+NNUE net:                     nn-1a298aa575a0.nnue
+NNUE net sha256:              1a298aa575a085434d29027978dc36867fe9c5bcea9376654b7a8eba1e52dfc2
+Modified files:
+  - .gitignore
+  - src/engine.cpp
+  - src/engine.h
+  - src/syzygy/tbprobe.h
+Added files of ours (not Stockfish):
+  - NOTICE
+  - PROVENANCE.md
+  - docs/PROTOCOL.md
+  - docs/LOGBOOK.md
+  - docs/build.md
+  - docs/sprt.md
+  - scripts/check_license.sh
+  - scripts/archive_usb.sh
+  - scripts/gate0.sh
+  - tools/ (checkers, mocks, doctor, SPRT harness, vendored fastchess)
+  - tools/tests/
+  - vendor/chess/
+  - evidence/
+  - RELEASE/
+
+## Narrative
+
+ChessChallendIII is a fork of Stockfish 19 (`sf_19`, commit `edb0d9db6731067ec50ce619ff372b463bc4dd5d`,
+dated 2026-09-05) prepared for the III Chess Challenge. The fork date is the first project
+commit (2026-10-26). Phase 1 touches only three upstream files (`src/engine.cpp`, `src/engine.h`,
+`src/syzygy/tbprobe.h`) to enforce the competition's five-piece tablebase ceiling (Rule 4);
+every touched file carries a dated `Modified by ChessChallendIII` line below its untouched
+upstream GPLv3 header, verified by `scripts/check_license.sh`.
+
+The evaluation network is the official Stockfish 19 network, unmodified, CC0-1.0, and is NOT
+authored by the team (see PROVENANCE.md). The Rule 2 authorship component lives in
+`src/timeman.*` (Phase 4): see `docs/timeman/` and AUTHORSHIP.md when they exist.
+
+Binary sha256 is provisional at this commit: it names the working-tree binary built from the
+pre-Task-3 tree. Task 3 replaces it with the hash of the network-severed namespace build and
+its own `Project commit (this build)`, per evidence/01-offline-build.log.
+
+License: GPL-3.0-or-later. See Copying.txt and NOTICE.
