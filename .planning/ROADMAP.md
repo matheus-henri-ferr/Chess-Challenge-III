@@ -41,8 +41,11 @@ Table stakes are 21–24 person-days against ~21 effective person-days in ten da
 **Plans**: 3 plans
 
 Plans:
+**Wave 1**
 - [ ] 01-01-PLAN.md — Provenance and offline build proof: `NOTICE` + `PROVENANCE.md` derived from commands, GPL dated lines, vendored `python-chess`, namespace build evidence, `RELEASE/` + USB archive script
 - [ ] 01-02-PLAN.md — Frozen contract: `docs/PROTOCOL.md` + `docs/LOGBOOK.md` in a docs-only commit, `mock_engine.py` + `mock_gui.py` speaking them to each other, ordering proof
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 01-03-PLAN.md — Rule ceilings and harness: `TB_PROBE_LIMIT=5` clamp + fatal exit, `doctor.py` pre-flight, fastchess + SPRT recipe, `scripts/gate0.sh`
 
 **Why this phase**: Both halves of day 0 are unrecoverable later. Compliance failures are **retroactive** — a game won with a 6-piece tablebase becomes a loss or a DQ after the fact — and the frozen contract is the only shared dependency between the three tracks. Shipping the *unmodified* Stockfish binary in hour 1 is what makes the three people genuinely parallel instead of nominally parallel.
