@@ -263,9 +263,9 @@ class EngineTransport:
         return self.search_id
 
     def mark_discarding(self):
-        """Ponder-miss stop path (§8.2): the owed bestmove must be discarded."""
+        """Ponder-miss stop path (§8.2): the owed bestmove must be discarded.
+        The next bestmove is flagged stale and clears the flag."""
         self.discarding = True
-
     def wait_for_bestmove(self, timeout):
         """Drain the event queue until the bestmove for the current search
         arrives, re-queuing everything else (§1.3: consume the owed bestmove

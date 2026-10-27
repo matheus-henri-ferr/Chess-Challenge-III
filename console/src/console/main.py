@@ -24,12 +24,18 @@ subprocess instances and never from the game path: the game send path is
 """
 
 import argparse
+import os
 import queue
+import pathlib
 import subprocess
 import sys
 
-from console.transport.parser import parse_line
 from console.transport.uci import EngineTransport, go_line
+
+# Smoke probes spawn throwaway engine instances; run them from the repo root
+# so relative paths (./src/stockfish, tools/mock_none_engine.py) resolve the
+# same way from any caller cwd.
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 
 
 def parse_args():
@@ -97,7 +103,8 @@ def _assert_search_found(t, expect_move=None):
 def _spike_probe_none():
     """Throwaway subprocess: `bestmove (none)` preceded by mate 0 (§7.2)."""
     argv = [sys.executable, "-c", SMOKE_NONE_PROBE]
-    p = subprocess.run(argv, capture_output=True, text=True, timeout=60)
+    p = subprocess.run(argv, capture_output=True, text=True, timeout=60,
+                       cwd=REPO_ROOT)
     assert p.returncode == 0, p.stdout + p.stderr
     return p.stdout
 
@@ -105,7 +112,8 @@ def _spike_probe_none():
 def _spike_probe_illegal(record_path):
     """Throwaway subprocess: illegal position → CRITICAL ERROR + rc=1 (§9.1)."""
     argv = [sys.executable, "-c", SMOKE_ILLEGAL_PROBE, record_path]
-    p = subprocess.run(argv, capture_output=True, text=True, timeout=60)
+    p = subprocess.run(argv, capture_output=True, text=True, timeout=60,
+                       cwd=REPO_ROOT)
     assert p.returncode == 0, (
         f"illegal-position probe failed rc={p.returncode}: {p.stdout}{p.stderr}")
     return p.stdout
