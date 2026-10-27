@@ -6,7 +6,7 @@
     {
       "number": "1",
       "name": "Foundation, Provenance & Frozen Contract",
-      "status": "complete"
+      "status": "pending"
     },
     {
       "number": "2",
@@ -42,7 +42,7 @@
   "next": {
     "command": "/gsd-progress --next",
     "label": "Advance to the next step",
-    "reason": "Phase 1 of 7 \u00b7 0% \u00b7 executing"
+    "reason": "Phase 2 of 7 · 14% · executing"
   },
-  "updated_at": "2026-10-27T15:06:56.070Z"
+  "updated_at": "2026-10-27T18:21:49.897Z"
 }
