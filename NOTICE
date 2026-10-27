@@ -7,14 +7,14 @@ Base commit date:             2026-09-05
 Fork date:                    2026-10-26
 Fork repository:              https://github.com/matheus-henri-ferr/Chess-Challenge-III
 License:                      GPL-3.0-or-later (see Copying.txt)
-Project commit (this build):  6927bca7d889bd41dfbf7a436417d1d796aede76
+Project commit (this build):  a84a87d77eaab7ad3ceabcab7f059cfb0f2a89bf
 Build command:                make -C src -j12 build
 Build profile:                build
 ARCH:                         x86-64-avxvnni
 Compiler:                     g++ (GNUC) 16.2.1 on Linux
 Compilation settings:         64bit VNNI BMI2 AVX2 SSE41 SSSE3 SSE2 POPCNT
 Bench nodes:                  2497913
-Binary sha256:                770466cd9aa55fd6e4fbad313a8d65cf1c6bbef2368b21e33af3408759db4f6b
+Binary sha256:                077d3601b503c369f97ed06df73cd5f3b44fd3d3fa513e31c92065da992c4a79
 NNUE net:                     nn-1a298aa575a0.nnue
 NNUE net sha256:              1a298aa575a085434d29027978dc36867fe9c5bcea9376654b7a8eba1e52dfc2
 Modified files:
@@ -51,8 +51,12 @@ The evaluation network is the official Stockfish 19 network, unmodified, CC0-1.0
 authored by the team (see PROVENANCE.md). The Rule 2 authorship component lives in
 `src/timeman.*` (Phase 4): see `docs/timeman/` and AUTHORSHIP.md when they exist.
 
-Binary sha256 is provisional at this commit: it names the working-tree binary built from the
-pre-Task-3 tree. Task 3 replaces it with the hash of the network-severed namespace build and
-its own `Project commit (this build)`, per evidence/01-offline-build.log.
+Binary sha256 and Project commit come from evidence/01-offline-build.log: the
+namespace-severed (`unshare -rn`) fresh-clone build at commit a84a87d7
+ reproduced 2,497,913 nodes and a byte-identical binary (077d3601…), and the
+working tree was rebuilt clean at the same commit to the same hash. A
+`profile-build` of the same tree produces a different hash with identical
+bench nodes; if the shipped binary is a profile-build, record its own hash
+and profile here.
 
 License: GPL-3.0-or-later. See Copying.txt and NOTICE.
