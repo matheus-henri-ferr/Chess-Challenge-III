@@ -33,6 +33,7 @@ import chess  # noqa: E402
 
 from console.engine.session import Session  # noqa: E402
 from console.game.board import BoardState  # noqa: E402
+from console.ui.loop import OperatorLoop  # noqa: E402
 
 
 class FakeTransport:
@@ -398,6 +399,116 @@ class OptionFlushTests(unittest.TestCase):
         s.setoption("Hash", "4096")
         self.assertEqual(t._pending_options, [("Hash", "4096")],
                          "queueing must not send mid-search")
+
+
+class LoopTests(unittest.TestCase):
+    """OperatorLoop: scripted stdin end-to-end + queue-drain liveness."""
+
+    def _make_io(self):
+        import io
+        stdin = io.StringIO()
+        stdout = io.StringIO()
+
+        class _Stdin:
+            def fileno(self):
+                return 0  # real fd 0; the scripted text is pre-loaded
+
+        return stdin, stdout
+
+    def test_scripted_stdin_move_garbage_clock(self):
+        # Scripted session: opp move e7e5 accepted (FEN echo), a malformed
+        # token typed-rejected while the opp is still to move, `t 7:42`
+        # journals OPP_CLOCK.
+        import io
+        board = BoardState()
+        board.try_push_token("e2e4")  # we already moved: opp (black) to move
+        s, t, o = make_session(our="w", board=board)
+        text = "e7e5\nNf3\nt 7:42\nq\n"
+        loop = OperatorLoop(s, t, stdin=io.StringIO(text),
+                            stdout=io.StringIO())
+        # Drive handle_line directly with the scripted lines (the StringIO
+        # has no real fd; the fd path is covered by the piped smoke). The
+        # search the accepted move triggers is answered offstage, then the
+        # replica is rewound one ply so the malformed token arrives in a
+        # wait-for-opp context (rejection must be shape-typed, not
+        # wrong-side-typed).
+        loop.handle_line("e7e5")
+        self.assertIn("E7-E5  FEN:", loop.stdout.getvalue())
+        t.outstanding = None  # search answered offstage
+        s.board.pop()         # still the opp's move to enter
+        loop.handle_line("Nf3")
+        loop.handle_line("t 7:42")
+        loop.handle_line("q")
+        out = loop.stdout.getvalue() + "\n".join(o["lines"])
+        self.assertIn("E7-E5  FEN:", out)          # instant accepted echo
+        self.assertIn("REJECTED malformed:", out)  # SAN-shaped typed reject
+        self.assertIn("opp clock: 7:42 = 462000 ms", out)
+        opp = [r for r in o["sink"] if r.get("e") == "OPP_CLOCK"]
+        self.assertEqual(len(opp), 1, o["sink"])
+        self.assertEqual(opp[0]["raw"], "7:42")
+        self.assertEqual(opp[0]["parsed_ms"], 462000)
+        self.assertEqual(s.board.moves, ["e2e4"])
+
+    def test_select_loop_drains_events_while_stdin_idle(self):
+        # Liveness: with NO stdin input, queued engine events still reach
+        # the session — ANNOUNCE appears while the operator sits at prompt.
+        import io
+        s, t, o = make_session(our="w")
+        t.finish_search("e2e4")  # an engine answer already queued
+        loop = OperatorLoop(s, t, stdin=io.StringIO(),
+                            stdout=io.StringIO())
+        loop.drain_events()  # the tick's queue-drain half
+        self.assertEqual(o["announces"], ["E2-E4"])
+        self.assertEqual(s.state, Session.ANNOUNCE_PENDING)
+
+    def test_length_bound_and_empty_input(self):
+        import io
+        s, t, o = make_session(our="w")
+        loop = OperatorLoop(s, t, stdin=io.StringIO(),
+                            stdout=io.StringIO())
+        loop.handle_line("x" * 40)
+        loop.handle_line("")
+        out = loop.stdout.getvalue()
+        self.assertIn("REJECTED malformed: input longer than 32", out)
+        self.assertIn("empty input", out)
+
+    def test_resync_command_and_confirmation(self):
+        import io
+        board = BoardState()
+        for uci in ("e2e4", "e7e5", "g1f3", "b8c6"):
+            board.try_push_token(uci)
+        s, t, o = make_session(our="w", board=board)
+        loop = OperatorLoop(s, t, stdin=io.StringIO(),
+                            stdout=io.StringIO())
+        loop.handle_line("r 1")
+        self.assertIn("resync armed (1 plies)", loop.stdout.getvalue())
+        self.assertIn("confirm with: y", loop.stdout.getvalue())
+        # Unconfirmed: board untouched.
+        self.assertEqual(s.board.moves[-1], "b8c6")
+        loop.handle_line("y")
+        self.assertEqual(s.board.moves, ["e2e4", "e7e5", "g1f3"])
+        self.assertEqual(loop.stdout.getvalue().count("resynced to"), 1)
+
+    def test_undo_command(self):
+        import io
+        board = BoardState()
+        board.try_push_token("e2e4")
+        s, t, o = make_session(our="w", board=board)
+        loop = OperatorLoop(s, t, stdin=io.StringIO(),
+                            stdout=io.StringIO())
+        loop.handle_line("u")
+        out = loop.stdout.getvalue()
+        self.assertIn("undone: e2e4", out)
+        self.assertEqual(s.board.moves, [])
+
+    def test_parse_clock_token_forms(self):
+        from console.ui.loop import parse_clock_token
+        self.assertEqual(parse_clock_token("7:42"), 462000)
+        self.assertEqual(parse_clock_token("1:07:30"), 4050000)
+        self.assertEqual(parse_clock_token("2.30"), 150000)
+        self.assertEqual(parse_clock_token("90"), 90000)
+        self.assertIsNone(parse_clock_token("abc"))
+        self.assertIsNone(parse_clock_token("7:"))
 
 
 if __name__ == "__main__":

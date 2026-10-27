@@ -62,16 +62,19 @@ from console.transport import parser as _parser  # noqa: E402
 class EngineTransport:
     """Subprocess owner for exactly one engine process (PROTOCOL §1.1)."""
 
-    def __init__(self, argv, record=None, read_timeout=30.0):
+    def __init__(self, argv, record=None, read_timeout=30.0, cwd=None):
         argv = list(argv)
         # Binary, unbuffered pipes: select() must see every byte the child
         # writes. TextIO buffering here deadlocks (buffer drains the fd,
         # select then times out on data we already own — verifier G1).
         # stderr NEVER merges into the UCI stream (mock_gui merges because
         # it is a dev driver — this console must not; T-02-03).
+        popen_kwargs = {}
+        if cwd is not None:
+            popen_kwargs["cwd"] = cwd
         self.popen = subprocess.Popen(
             argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE, bufsize=0,
+            stderr=subprocess.PIPE, bufsize=0, **popen_kwargs
         )
         self.rec = open(record, "a", encoding="utf-8") if record else None
         self.read_timeout = read_timeout
