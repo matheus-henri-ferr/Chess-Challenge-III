@@ -208,7 +208,7 @@ class SessionStaleBestmoveTests(PonderTestBase):
 
     def make_session(self, t, our="w"):
         sink, announces, pvs = [], [], []
-        session = Session(t, BoardState(), sink=sink, our_color=our,
+        session = Session(t, BoardState(), sink=sink.append, our_color=our,
                           announce_cb=announces.append, pv_cb=pvs.append)
         return session, sink, announces, pvs
 
@@ -285,7 +285,10 @@ class SessionStaleBestmoveTests(PonderTestBase):
         self.pump(session, t, until=lambda fed: fed.count("stale_bestmove") >= 1
                   or fed.count("bestmove") >= 1)
         session.on_opp_move_during_ponder("d7d5")
-        self.assertEqual(session.state, Session.DISCARDING)
+        # The bounded drain inside the call may already have completed the
+        # hand-off; either way the pump below waits for OUR_SEARCH.
+        self.assertIn(session.state,
+                      (Session.DISCARDING, Session.OUR_SEARCH))
         self.pump(session, t,
                   until=lambda fed: any(r.get("e") == "STALE_BESTMOVE"
                                         for r in sink)
