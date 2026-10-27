@@ -42,6 +42,8 @@ NotImplementedError until Phase 5. Clock numbers ride through verbatim
 (research A2 placeholder); Phase 3's ClockModel replaces the setter.
 """
 
+import time
+
 from console.game.moves import Reject, announce_form, operator_move
 
 # Event vocabulary (RESEARCH Pattern 3 — Phase 3 extends, never rewrites):
@@ -88,6 +90,11 @@ class Session:
         self.ponder_spec = None         # the speculative ponder move
         self.opp_clock_raw = None       # last `t` reading (raw + parsed)
         self.opp_clock_ms = None
+        self.search_t0_ms = None        # wall_ms anchor: stamped at the go write
+        self.game_t0_ms = None          # wall anchor for the game's first row
+        self.last_move_wall_ms = None   # receipt time of the last logged row
+        self.game_id = None             # header field (main.py owns the id)
+        self.log_ctx = {}               # header ctx: net sha, TC, option set
 
     # --- plumbing -------------------------------------------------------------
     def _emit(self, event):
@@ -102,6 +109,10 @@ class Session:
         w_ms, b_ms = self.clock_passthrough_ms
         return go_line(w_ms, b_ms)
 
+    def _wall_ms_now(self):
+        """monotonic_ns() → ms (LOG-03 timing source, console-wide)."""
+        return time.monotonic_ns() // 1_000_000
+
     # --- startup (B1 fix + §2.3) ------------------------------------------------
     def apply_startup_options(self):
         """Queue the §2.3 set then flush once — IDLE only, after handshake."""
@@ -109,10 +120,19 @@ class Session:
             self.setoption(name, value)
         self.transport.flush_pending_options()
 
-    def start_game(self):
+    def start_game(self, game_id=None):
         """Game-start trigger: search #1 fires automatically when our colour
-        moves first; with the opponent to move, send nothing and wait."""
-        self._emit({"e": "GAME_START", "our_color": self.our_color,
+        moves first; with the opponent to move, send nothing and wait.
+
+        GAME_START carries the game id and the clock passthrough values the
+        frozen go line will use (the §5.1 header's numbers, journaled too).
+        """
+        w_ms, b_ms = self.clock_passthrough_ms
+        self.game_t0_ms = self._wall_ms_now()
+        self.last_move_wall_ms = self.game_t0_ms
+        self._emit({"e": "GAME_START", "game_id": game_id,
+                    "our_color": self.our_color,
+                    "clock_ms": {"w": w_ms, "b": b_ms},
                     "fen": self.board.fen()})
         if self.board.expected_mover() == self.our_color:
             self._start_search()
@@ -121,10 +141,15 @@ class Session:
 
     # --- send side (the position line is ALWAYS the replica's, §4.1) ---------
     def _start_search(self):
-        """position_line + frozen go via transport.start_search → OUR_SEARCH."""
+        """position_line + frozen go via transport.start_search → OUR_SEARCH.
+
+        wall_ms anchor (Pitfall 7): t0 is stamped HERE, at the go write —
+        never at the position send. Bestmove handlers read it back.
+        """
         sid = self.transport.start_search()  # §1.3: raises if one outstanding
         self.transport.send(self.board.position_line())
         self.transport.send(self._go_line())
+        self.search_t0_ms = self._wall_ms_now()  # wall_ms anchor: the go write
         self.state = self.OUR_SEARCH
         return sid
 
@@ -155,7 +180,17 @@ class Session:
             self.display_cb(f"REJECTED {reject.kind.value}: {reject.reason}")
             return None
         meta = self.board.push_validated(move)
-        self._emit({"e": "MOVE_LOGGED", "src": "opp", **meta})
+        # §4.5 fill: depth=0 nodes=0 score=- engine_ms=0, wall measured.
+        # Anchor: the last logged row's receipt (bestmove for us, or game
+        # start) — the interval the opponent actually took + entry time.
+        now = self._wall_ms_now()
+        anchor = self.last_move_wall_ms if self.last_move_wall_ms is not None \
+            else self.game_t0_ms
+        wall_ms = max(0, now - (anchor if anchor is not None else now))
+        self._emit({"e": "MOVE_LOGGED", "src": "opp", **meta,
+                    "depth": 0, "nodes": 0, "score": "-",
+                    "engine_ms": 0, "wall_ms": wall_ms, "pv": move.uci()})
+        self.last_move_wall_ms = now
         self.state = self.OPP_TURN
         self._start_search()  # our turn now: the engine answers
         return move
@@ -204,10 +239,27 @@ class Session:
             return
         if move_token == "(none)":
             # §7.2: no legal move exists — game over per the rules.
+            # Terminal row first (LOGBOOK §4.6: src=none, uci=(none),
+            # depth=0 nodes=0, non-empty score — `mate 0` verified live on
+            # the wire immediately before `bestmove (none)`), then GAME_END.
             outcome = self.board.outcome()
+            score = self.last_info.get("score", "mate 0")
+            now = self._wall_ms_now()
+            anchor = self.last_move_wall_ms if self.last_move_wall_ms \
+                is not None else self.game_t0_ms
+            wall_ms = max(0, now - (anchor if anchor is not None else now))
+            mover = self.board.expected_mover()
+            move_no = self.board.board.fullmove_number
+            self._emit({"e": "MOVE_LOGGED", "src": "none", "uci": "(none)",
+                        "move_no": move_no, "side": mover,
+                        "depth": 0, "nodes": 0, "score": score,
+                        "engine_ms": self.last_info.get("time", 0),
+                        "wall_ms": wall_ms, "pv": "(none)"})
             self._emit({"e": "GAME_END",
                         "reason": outcome.termination.name if outcome
-                        else "no-legal-move"})
+                        else "no-legal-move",
+                        "result": (outcome.result() if outcome else "*"),
+                        "uci": "(none)"})
             self.state = self.IDLE
             return
         # T-02-07: validate against the replica BEFORE display.
@@ -225,12 +277,30 @@ class Session:
         meta = self.board.push_validated(move)
         self._announce(announce_form(move.uci()))
         self.last_announced = move
+        # wall_ms: monotonic delta from the go-write anchor (Pitfall 7);
+        # engine_ms is the wire `info time` milliseconds (§5.2). The
+        # wall_ms ≥ engine_ms invariant is asserted here at write time and
+        # re-checked fail-closed by log_lint (T-02-13).
+        engine_ms = self.last_info.get("time", 0)
+        wall_ms = 0
+        if self.search_t0_ms is not None:
+            # Floor 1: a completed search spans at least one pipe+thread
+            # round trip — below the log's 1 ms quantum. The floor keeps
+            # the §2.2 invariant writable for instant searches; a peer
+            # claiming MORE than wall (impossible timing, T-02-13) still
+            # fires the assert below.
+            wall_ms = max(1, self._wall_ms_now() - self.search_t0_ms)
+        assert wall_ms >= engine_ms, (
+            f"wall_ms {wall_ms} < engine_ms {engine_ms} "
+            f"(timing anchor bug, Pitfall 7)")
         self._emit({"e": "MOVE_LOGGED", "src": "search", **meta,
                     "depth": self.last_info.get("depth", 0),
                     "nodes": self.last_info.get("nodes", 0),
                     "score": self.last_info.get("score", "-"),
-                    "engine_ms": self.last_info.get("time", 0),
+                    "engine_ms": engine_ms,
+                    "wall_ms": wall_ms,
                     "pv": self.last_info.get("pv", move.uci())})
+        self.last_move_wall_ms = self._wall_ms_now()
         self.state = self.ANNOUNCE_PENDING
 
     # --- clock capture (PROTO-08: capture now, interpret in Phase 3) ----------
@@ -306,7 +376,14 @@ class Session:
                 "ponderhit path is Phase 5 (TM-13) — not wired in Phase 2")
         # Miss: the position changed on the physical board.
         meta = self.board.push_validated(move)
-        self._emit({"e": "MOVE_LOGGED", "src": "opp", **meta})
+        now = self._wall_ms_now()
+        anchor = self.last_move_wall_ms if self.last_move_wall_ms is not None \
+            else self.game_t0_ms
+        wall_ms = max(0, now - (anchor if anchor is not None else now))
+        self._emit({"e": "MOVE_LOGGED", "src": "opp", **meta,
+                    "depth": 0, "nodes": 0, "score": "-",
+                    "engine_ms": 0, "wall_ms": wall_ms, "pv": move.uci()})
+        self.last_move_wall_ms = now
         self.transport.send("stop")
         self.transport.mark_discarding()
         self.discarding = True

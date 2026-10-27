@@ -24,6 +24,7 @@ subprocess instances and never from the game path: the game send path is
 """
 
 import argparse
+import hashlib
 import os
 import queue
 import pathlib
@@ -32,6 +33,7 @@ import sys
 
 from console.transport.uci import EngineTransport, go_line
 from console.game.board import BoardState
+from console.game.journal import Journal
 from console.engine.session import Session
 from console.ui.loop import OperatorLoop
 
@@ -58,7 +60,66 @@ def parse_args():
                         " with the ClockModel)")
     p.add_argument("--transport-smoke", action="store_true",
                    help="run the five-wire-fact spike against --engine and exit")
+    p.add_argument("--log-dir", default=None,
+                   help="journal + log directory (resolved absolute; created"
+                        " if missing; loud refusal if unwritable at"
+                        " GAME_START). Without it the console runs without"
+                        " a journal (dev mode only).")
+    p.add_argument("--game-id", default=None,
+                   help="game id for journal-<id>.jsonl / game-<id>.log"
+                        " (alnum + dash)")
     return p.parse_args()
+
+
+def validate_game_id(game_id):
+    """T-02-15: game id is alnum + dash only — no path traversal surface."""
+    if game_id is None:
+        return None
+    if not game_id or not all(c.isalnum() or c == "-" for c in game_id):
+        raise SystemExit(f"bad --game-id {game_id!r}: use alnum + dash only")
+    return game_id
+
+
+def open_journal(log_dir, game_id):
+    """Journal at <dir>/journal-<game-id>.jsonl, dir resolved absolute.
+
+    Created if missing; unwritable target refuses loudly BEFORE the game
+    starts (acceptance criterion: non-zero exit, named reason). The probe
+    appends+fsyncs to a throwaway file in the SAME directory — the real
+    journal's first record stays the session's own GAME_START.
+    """
+    from console.game.journal import append_event
+    directory = pathlib.Path(log_dir).expanduser().resolve()
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        if not os.access(directory, os.W_OK | os.X_OK):
+            raise PermissionError(directory)
+        probe = directory / ".journal-probe.tmp"
+        append_event(probe, {"e": "GAME_START", "probe": "writability"})
+        records = Journal(probe).iter_records()
+        assert records and records[-1].get("probe") == "writability"
+        probe.unlink(missing_ok=True)
+        journal_name = f"journal-{game_id}.jsonl" if game_id \
+            else "journal.jsonl"
+        return Journal(directory / journal_name)
+    except (OSError, PermissionError, AssertionError) as exc:
+        raise SystemExit(
+            f"FATAL: --log-dir {log_dir!r} is not writable for the journal "
+            f"({directory}): {exc}") from exc
+
+
+def engine_sha256(engine_path):
+    """§5.1 header field: the engine binary's sha256, recomputed at game
+    start (dev builds change; the header always tells the truth)."""
+    path = pathlib.Path(engine_path)
+    try:
+        digest = hashlib.sha256()
+        with open(path, "rb") as fh:
+            for chunk in iter(lambda: fh.read(1 << 20), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+    except OSError:
+        return "unavailable"  # script engines (mocks) have no binary sha
 
 
 def parse_clock_ms(specs):
@@ -271,8 +332,13 @@ def run_game(args) -> int:
     Startup order is load-bearing: option flush happens BEFORE start_game
     (flush is IDLE-only), and with --our-color w the game-start trigger
     fires search #1 without operator input; with b the console waits for
-    the opponent's first typed move.
+    the opponent's first typed move. With --log-dir the session's event
+    sink is a real fsync Journal (02-03); every session event lands on
+    disk before the console proceeds.
     """
+    game_id = validate_game_id(args.game_id)
+    journal = open_journal(args.log_dir, game_id) if args.log_dir else None
+    sink = journal.append if journal is not None else (lambda event: None)
     w_ms, b_ms = parse_clock_ms(args.clock_ms)
     argv = engine_argv(args)
     # Python engine scripts run from the repo root so tools/ imports and
@@ -282,12 +348,12 @@ def run_game(args) -> int:
                                 if args.engine.endswith(".py") else None)
     try:
         transport.handshake(timeout=10.0)
-        sink = lambda event: None  # 02-03 journals; Phase 2 sinks discard
         session = Session(transport, BoardState(), sink=sink,
                           our_color=args.our_color)
+        session.game_id = game_id
         session.clock_passthrough_ms = (w_ms, b_ms)
         session.apply_startup_options()  # §2.3 set, flushed once at IDLE
-        session.start_game()             # B1 fix: search #1 fires iff we move first
+        session.start_game(game_id=game_id)  # B1: search #1 fires iff we move first
         loop = OperatorLoop(session, transport)
         return loop.run()
     finally:
