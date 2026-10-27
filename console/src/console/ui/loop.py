@@ -172,10 +172,14 @@ class OperatorLoop:
         self.say(f"{announce_form(move.uci())}  FEN: {self.session.board.fen()}")
 
     # --- main loop ---------------------------------------------------------------
-    def run(self, max_ticks=None):
-        """Poll queue + stdin until `q` or EOF. max_ticks bounds tests.
+    def run(self, max_ticks=None, tracer=None):
+        """Poll queue + stdin until `q`, EOF, or tracer end. max_ticks
+        bounds tests.
 
         With a scripted (non-fd) stdin, lines are consumed without select.
+        `tracer` (02-03): when set, the operator stdin is NOT owned by the
+        run — EOF on it is ignored (the tracer owns the exit path); the
+        loop ends only when the tracer finished or `q` arrives.
         """
         ticks = 0
         self.prompt()
@@ -184,10 +188,14 @@ class OperatorLoop:
                 break
             ticks += 1
             self.drain_events()
+            if tracer is not None and tracer.finished:
+                break
             if self.stdin_fd is not None:
                 ready, _, _ = select.select([self.stdin_fd], [], [],
                                             POLL_SECONDS)
                 if self.stdin_fd not in ready:
+                    if tracer is not None and tracer.finished:
+                        break
                     self.prompt()
                     continue
                 line = self._read_line()
@@ -198,6 +206,11 @@ class OperatorLoop:
                 else:
                     line = line.rstrip("\n")
             if line is None:  # EOF — clean shutdown
+                if tracer is not None and not tracer.finished:
+                    # Tracer mode: stdin EOF is not the game's end (the
+                    # console is driven by a harness); keep polling.
+                    time.sleep(POLL_SECONDS)
+                    continue
                 self._shutdown()
                 break
             self.handle_line(line)

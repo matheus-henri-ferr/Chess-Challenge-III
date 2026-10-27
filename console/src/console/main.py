@@ -24,6 +24,7 @@ subprocess instances and never from the game path: the game send path is
 """
 
 import argparse
+import hashlib
 import os
 import queue
 import pathlib
@@ -32,6 +33,7 @@ import sys
 
 from console.transport.uci import EngineTransport, go_line
 from console.game.board import BoardState
+from console.game.journal import Journal
 from console.engine.session import Session
 from console.ui.loop import OperatorLoop
 
@@ -58,7 +60,76 @@ def parse_args():
                         " with the ClockModel)")
     p.add_argument("--transport-smoke", action="store_true",
                    help="run the five-wire-fact spike against --engine and exit")
+    p.add_argument("--log-dir", default=None,
+                   help="journal + log directory (resolved absolute; created"
+                        " if missing; loud refusal if unwritable at"
+                        " GAME_START). Without it the console runs without"
+                        " a journal (dev mode only).")
+    p.add_argument("--game-id", default=None,
+                   help="game id for journal-<id>.jsonl / game-<id>.log"
+                        " (alnum + dash)")
+    p.add_argument("--auto-opp", default=None, metavar="LINE",
+                   help="tracer mode: the opponent's moves are fed from a"
+                        " fixed legal UCI line (space-separated); the feeder"
+                        " types a move only when the replica says it is the"
+                        " opponent's turn and the scripted move is legal"
+                        " there")
+    p.add_argument("--max-plies", default=None, type=int, metavar="N",
+                   help="tracer mode: end the game after N half-moves (or a"
+                        " terminal bestmove) — GAME_END, log write, in-process"
+                        " lint, exit 0")
     return p.parse_args()
+
+
+def validate_game_id(game_id):
+    """T-02-15: game id is alnum + dash only — no path traversal surface."""
+    if game_id is None:
+        return None
+    if not game_id or not all(c.isalnum() or c == "-" for c in game_id):
+        raise SystemExit(f"bad --game-id {game_id!r}: use alnum + dash only")
+    return game_id
+
+
+def open_journal(log_dir, game_id):
+    """Journal at <dir>/journal-<game-id>.jsonl, dir resolved absolute.
+
+    Created if missing; unwritable target refuses loudly BEFORE the game
+    starts (acceptance criterion: non-zero exit, named reason). The probe
+    appends+fsyncs to a throwaway file in the SAME directory — the real
+    journal's first record stays the session's own GAME_START.
+    """
+    from console.game.journal import append_event
+    directory = pathlib.Path(log_dir).expanduser().resolve()
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        if not os.access(directory, os.W_OK | os.X_OK):
+            raise PermissionError(directory)
+        probe = directory / ".journal-probe.tmp"
+        append_event(probe, {"e": "GAME_START", "probe": "writability"})
+        records = Journal(probe).iter_records()
+        assert records and records[-1].get("probe") == "writability"
+        probe.unlink(missing_ok=True)
+        journal_name = f"journal-{game_id}.jsonl" if game_id \
+            else "journal.jsonl"
+        return Journal(directory / journal_name)
+    except (OSError, PermissionError, AssertionError) as exc:
+        raise SystemExit(
+            f"FATAL: --log-dir {log_dir!r} is not writable for the journal "
+            f"({directory}): {exc}") from exc
+
+
+def engine_sha256(engine_path):
+    """§5.1 header field: the engine binary's sha256, recomputed at game
+    start (dev builds change; the header always tells the truth)."""
+    path = pathlib.Path(engine_path)
+    try:
+        digest = hashlib.sha256()
+        with open(path, "rb") as fh:
+            for chunk in iter(lambda: fh.read(1 << 20), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+    except OSError:
+        return "unavailable"  # script engines (mocks) have no binary sha
 
 
 def parse_clock_ms(specs):
@@ -271,8 +342,18 @@ def run_game(args) -> int:
     Startup order is load-bearing: option flush happens BEFORE start_game
     (flush is IDLE-only), and with --our-color w the game-start trigger
     fires search #1 without operator input; with b the console waits for
-    the opponent's first typed move.
+    the opponent's first typed move. With --log-dir the session's event
+    sink is a real fsync Journal (02-03); every session event lands on
+    disk before the console proceeds.
+
+    Tracer mode (--auto-opp + --max-plies): a feeder thread plays the
+    opponent's side of a fixed legal line; at --max-plies half-moves (or
+    a terminal (none)) the game ends, the .log is rendered from the
+    journal, linted in-process, and the run exits 0 on `OK fullgame`.
     """
+    game_id = validate_game_id(args.game_id)
+    journal = open_journal(args.log_dir, game_id) if args.log_dir else None
+    sink = journal.append if journal is not None else (lambda event: None)
     w_ms, b_ms = parse_clock_ms(args.clock_ms)
     argv = engine_argv(args)
     # Python engine scripts run from the repo root so tools/ imports and
@@ -280,16 +361,34 @@ def run_game(args) -> int:
     transport = EngineTransport(argv, record=args.record,
                                 cwd=str(REPO_ROOT)
                                 if args.engine.endswith(".py") else None)
+    tracer = None
     try:
         transport.handshake(timeout=10.0)
-        sink = lambda event: None  # 02-03 journals; Phase 2 sinks discard
         session = Session(transport, BoardState(), sink=sink,
                           our_color=args.our_color)
+        session.game_id = game_id
         session.clock_passthrough_ms = (w_ms, b_ms)
         session.apply_startup_options()  # §2.3 set, flushed once at IDLE
-        session.start_game()             # B1 fix: search #1 fires iff we move first
+        session.start_game(game_id=game_id)  # B1: search #1 fires iff we move first
         loop = OperatorLoop(session, transport)
-        return loop.run()
+        tracer = None
+        if args.auto_opp is not None or args.max_plies is not None:
+            tracer = GameTracer(session, loop, transport,
+                                journal=journal,
+                                our_color=session.our_color,
+                                auto_opp=args.auto_opp or "",
+                                max_plies=args.max_plies,
+                                log_dir=args.log_dir,
+                                game_id=game_id,
+                                engine_path=args.engine,
+                                clock_ms=(w_ms, b_ms))
+            tracer.start()
+        try:
+            rc = loop.run(tracer=tracer)
+        finally:
+            if tracer is not None:
+                tracer.stop()
+        return rc
     finally:
         try:
             transport.close()
@@ -302,6 +401,205 @@ def main() -> int:
     if args.transport_smoke:
         return transport_smoke(args)
     return run_game(args)
+
+
+class GameTracer:
+    """02-03 tracer: scripted opponent feeder + ply cap + log/lint exit.
+
+    Feeder (research Open Question #4, fixed-legal-line option): a daemon
+    thread polls the session; when the replica says it is the OPPONENT'S
+    turn and the next scripted move is legal there, it is typed into the
+    loop's normal input path — the console validates it exactly as a human
+    token (no feeder shortcut past the legality gate). A scripted move
+    that no longer matches the position is skipped forward (the engine's
+    reply diverged from the line; the next matching position resumes).
+
+    Termination: max_plies MOVE_LOGGED rows, or a terminal (none), or
+    engine death — GAME_END is journaled, the .log is rendered from the
+    journal via MoveLog (header §5.1 + move lines §3.1 + trailer §5.2),
+    linted in-process, and `OK fullgame: N half-moves, lint clean` is
+    printed. The loop's `q`-shutdown races are avoided by stopping the
+    loop directly (the tracer owns the exit path).
+    """
+
+    def __init__(self, session, loop, transport, *, journal, our_color,
+                 auto_opp, max_plies, log_dir=None, game_id=None,
+                 engine_path="./src/stockfish", clock_ms=(900000, 900000)):
+        import threading
+        self.session = session
+        self.loop = loop
+        self.transport = transport
+        self.journal = journal
+        self.our_color = our_color
+        self.line = auto_opp.split()
+        self.max_plies = max_plies if max_plies is not None else 10 ** 9
+        self.log_dir = log_dir
+        self.game_id = game_id
+        self.engine_path = engine_path
+        self.clock_ms = clock_ms
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self.finished = False
+
+    def start(self):
+        self._thread.start()
+
+    def stop(self):
+        self._stop.set()
+        self._thread.join(timeout=5)
+
+    # --- feeder ---------------------------------------------------------
+    def _run(self):
+        import time
+        deadline = time.monotonic() + 280.0  # inside the e2e's 300 s budget
+        while not self._stop.is_set() and not self.finished:
+            if time.monotonic() > deadline:
+                self._finish("wall-clock budget exceeded")
+                return
+            if self.transport.popen.poll() is not None:
+                self._finish("engine exited")
+                return
+            rows = self._move_rows()
+            if len(rows) >= self.max_plies:
+                self._finish(None)
+                return
+            if any(r.get("e") == "GAME_END" for r in self._records()):
+                self._finish(None)
+                return
+            # Terminal search (no legal move): the (none) row is already
+            # in the journal — the GAME_END check above caught it.
+            if (self.session.board.expected_mover() != self.our_color
+                    and self._next_opp_token() is None):
+                # Scripted line run dry with the game still open: a
+                # harness-driven game ends here — never idle until the
+                # wall budget (the engine has nothing to answer).
+                self._finish(None, reason="scripted line exhausted")
+                return
+            self._feed_one()
+            time.sleep(0.02)
+
+    def _records(self):
+        if self.journal is None:
+            return []
+        return self.journal.iter_records()
+
+    def _move_rows(self):
+        return [r for r in self._records() if r.get("e") == "MOVE_LOGGED"]
+
+    def _feed_one(self):
+        """Type the next scripted opp move when it is opp's turn + legal."""
+        board = self.session.board
+        if board.expected_mover() == self.our_color:
+            return  # our move: the engine is searching
+        token = self._next_opp_token()
+        if token is None:
+            # Line exhausted (or diverged): the terminal/max-plies/
+            # wall-clock guards own the end; stop feeding.
+            return
+        # The session's normal input path — same side guard, same typed
+        # legality gate, same MOVE_LOGGED journal record as a human token.
+        self.session.on_operator_move(token)
+
+    def _next_opp_token(self):
+        """First scripted token not yet on the board and legal now.
+
+        Legality is probed on a scratch replica replaying the live move
+        list — the board stays the gate; a diverged scripted move is
+        skipped (the next matching position resumes the line).
+        """
+        board = self.session.board
+        played = set(board.moves)
+        for token in self.line:
+            if token in played:
+                continue
+            scratch = type(board)()
+            for uci in board.moves:
+                scratch.try_push_token(uci)
+            move, reject = scratch.try_push_token(token)
+            if move is not None:
+                return token
+            continue  # diverged: skip and try the next scripted token
+        return None
+
+    # --- finish: journal → log → lint → OK --------------------------------
+    def _finish(self, failure, reason=None):
+        if self.finished:
+            return
+        self.finished = True
+        session = self.session
+        records = self._records()
+        rows = [r for r in records if r.get("e") == "MOVE_LOGGED"]
+        game_end = next((r for r in reversed(records)
+                         if r.get("e") == "GAME_END"), None)
+        reason = failure or reason or (game_end or {}).get("reason") or \
+            f"max-plies {self.max_plies} reached"
+        result = (game_end or {}).get("result", "*")
+        if failure:
+            self.loop.say(f"TRACER FAILURE: {failure}")
+        # Journal the termination when it is not already there.
+        if not game_end and self.journal is not None:
+            self.journal.append({"e": "GAME_END", "reason": reason,
+                                 "result": result})
+        # Render the .log from the journal (never a parallel history).
+        try:
+            self._write_log(records, reason, result)
+            n = len(rows)
+            self.loop.say(f"OK fullgame: {n} half-moves, lint clean")
+        except TracerLogError as exc:
+            self.loop.say(f"TRACER LOG/LINT FAILURE: {exc}")
+        # The loop's stdin is the operator's; end the run from here.
+        self.loop._quit = True
+
+    def _write_log(self, records, reason, result):
+        import datetime
+        import hashlib
+        import pathlib
+        from console.log.lint import lint_log
+        from console.log.movelog import MoveLog, render
+        if self.journal is None or self.log_dir is None:
+            return  # tracer needs a journal target
+        log_dir = pathlib.Path(self.log_dir).expanduser().resolve()
+        log_dir.mkdir(parents=True, exist_ok=True)
+        name = f"game-{self.game_id}.log" if self.game_id else "game.log"
+        log_path = log_dir / name
+        from console.main import engine_sha256
+        lines = []
+        lines.append(f"# game-id {self.game_id or 'game'}")
+        lines.append(f"# date {datetime.date.today().isoformat()}")
+        lines.append(f"# our-color {self.our_color}")
+        lines.append("# time-control 15+10")
+        lines.append(f"# engine-sha256 {engine_sha256(self.engine_path)}")
+        # nn-1a298aa575a0.nnue — PROVENANCE §1 (official SF19 net, CC0,
+        # unmodified). The file name IS the SHA-256 prefix convention.
+        lines.append("# net-sha256 1a298aa575a0 (nn-1a298aa575a0.nnue,"
+                     " official SF19 net, unmodified)")
+        lines.append("# setoption Threads=1 Hash=2048 SyzygyPath=<empty> "
+                     "SyzygyProbeLimit=5 Move_Overhead=100 Ponder=false")
+        lines.append("# SyzygyProbeLimit 5")
+        lines.append("# tb-inventory-hash none")
+        lines.append("# book-hash none book-max-ply 0")
+        lines.append("# network=off")
+        # Move rows: fold from the journal (the projection discipline).
+        for rec in MoveLog.build(records):
+            lines.append(render(rec))
+        lines.append(f"# result {result} reason {reason}")
+        w_ms, b_ms = self.clock_ms
+        lines.append(f"# final-clocks w={w_ms} b={b_ms}")
+        body = "\n".join(lines) + "\n"
+        with open(log_path, "w", encoding="utf-8") as fh:
+            fh.write(body)
+        # Trailer's log-sha256 covers the file bytes written so far.
+        sha = hashlib.sha256(body.encode("utf-8")).hexdigest()
+        with open(log_path, "a", encoding="utf-8") as fh:
+            fh.write(f"# log-sha256 {sha}\n")
+        # In-process lint — fail-closed: a failing log raises.
+        failures = lint_log(log_path)
+        if failures:
+            raise TracerLogError("; ".join(failures[:5]))
+
+
+class TracerLogError(Exception):
+    """The rendered log failed log_lint — never shipped (fail closed)."""
 
 
 if __name__ == "__main__":
