@@ -21,7 +21,7 @@ Modified files:
   - .gitignore
   - src/engine.cpp
   - src/engine.h
-  - src/syzygy/tbprobe.h
+  - src/syzygy/tbprobe.h (TB_PROBE_LIMIT=5 constant + Rule 4 ceiling guard)
 Added files of ours (not Stockfish):
   - NOTICE
   - PROVENANCE.md

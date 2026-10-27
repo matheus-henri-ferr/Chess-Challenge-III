@@ -97,6 +97,7 @@ class Engine {
     // network related
 
     void                                 verify_network() const;
+    std::optional<std::string>           verify_tb_ceiling() const;
     std::unique_ptr<Eval::NNUE::Network> get_default_network();
     void                                 load_network(const std::filesystem::path& file);
     void save_network(const std::optional<std::filesystem::path>& file);

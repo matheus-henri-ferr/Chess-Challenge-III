@@ -25,7 +25,7 @@ License: GPL-3.0-or-later. See Copying.txt and NOTICE.
 | Retrieved from | https://tablebase.sesse.net/syzygy/3-4-5/ (mirror: https://syzygy-tables.info) |
 | Retrieval date | not yet fetched |
 | Local path (game) | /opt/tb/3-4-5 (absolute; never relative) |
-| Engine option | SyzygyPath, with SyzygyProbeLimit=5 enforced by Tablebases::TB_PROBE_LIMIT (src/syzygy/tbprobe.h) and attested at every search |
+| Engine option | SyzygyPath, with SyzygyProbeLimit=5 enforced by Tablebases::TB_PROBE_LIMIT (src/syzygy/tbprobe.h), clamped at the option layer (default 5 min 0 max 5), attested at every search (`info string TB ceiling OK: …`), and fatal on a 6-man directory (`CRITICAL ERROR: TB CEILING VIOLATION`, exit 1) — see evidence/01-tb-ceiling.log |
 | File count | not yet fetched (expected 378 .rtbw + 561 .rtbz, 939 MiB total) |
 | Total bytes | not yet fetched |
 | Manifest | tb/SHA256SUMS at the tablebase root (see §2.1) |

@@ -65,6 +65,12 @@ enum ProbeState {
 
 extern int MaxCardinality;
 
+// ChessChallendIII: Rule 4 of the III Chess Challenge permits at most five
+// pieces. The number lives here, at the probing layer, not in TBPIECES
+// (src/syzygy/tbprobe.cpp), which stays 7 as the supported format width —
+// shrinking it risks an out-of-bounds probe on a legal 6/7-man file.
+constexpr int TB_PROBE_LIMIT = 5;
+
 
 void     init(const std::string& paths);
 WDLScore probe_wdl(Position& pos, ProbeState* result);

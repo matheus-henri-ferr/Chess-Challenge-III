@@ -1,0 +1,18 @@
+# ChessChallendIII TB ceiling evidence (plan 01-03 Task 1, LIMIT-01)
+# date: 2026-10-27T13:02:59Z  commit: 71c079c29c43373833e1646decd94964bdcee775
+# binary: 795056df4461712fdcf10b5da4b95bd0e3d235251665fd9a1fb39f65b4e0b294  src/stockfish
+
+## 1. option listing (uci)
+option name SyzygyProbeLimit type spin default 5 min 0 max 5
+
+## 2. clamp + attestation (setoption 7, then go)
+info string TB ceiling OK: SyzygyProbeLimit=5 max_loaded=0
+
+## 3. fatal 6-piece directory
+exit code: 1
+info string CRITICAL ERROR: TB CEILING VIOLATION: max_loaded=6 exceeds the Rule 4 ceiling 5
+
+## 4. bench unchanged
+Total time (ms) : 3626
+Nodes searched  : 2497913
+Nodes/second    : 688889

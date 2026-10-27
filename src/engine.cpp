@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstdlib>
 #include <filesystem>
 #include <deque>
 #include <iosfwd>
@@ -123,8 +124,20 @@ Engine::Engine(std::optional<std::filesystem::path> path) :
     options.add("UCI_ShowWDL", Option(false));
 
     options.add(  //
-      "SyzygyPath", Option("", [](const Option& o) {
+      "SyzygyPath", Option("", [this](const Option& o) {
           Tablebases::init(o);
+          // ChessChallendIII: Rule 4 ceiling is fatal, not advisory. A
+          // returned string cannot block anything, so a violation exits.
+          // (terminate_on_critical_error is private to UCIEngine; only its
+          // output shape is replicated here.)
+          if (const auto violation = verify_tb_ceiling();
+              violation.has_value()
+              && violation->rfind("TB CEILING VIOLATION", 0) == 0)
+          {
+              sync_cout << "info string CRITICAL ERROR: " << *violation
+                        << sync_endl;
+              std::exit(1);
+          }
           return std::nullopt;
       }));
 
@@ -132,7 +145,7 @@ Engine::Engine(std::optional<std::filesystem::path> path) :
 
     options.add("Syzygy50MoveRule", Option(true));
 
-    options.add("SyzygyProbeLimit", Option(7, 0, 7));
+    options.add("SyzygyProbeLimit", Option(Tablebases::TB_PROBE_LIMIT, 0, Tablebases::TB_PROBE_LIMIT));
 
     options.add(  //
       "EvalFile", Option(EvalFileDefaultName, [this](const Option& o) {
@@ -156,6 +169,10 @@ void Engine::go(Search::LimitsType& limits) {
     assert(limits.perft == 0);
     verify_network();
 
+    // ChessChallendIII: attest the Rule 4 ceiling at the top of every search.
+    if (const auto msg = verify_tb_ceiling(); msg.has_value())
+        onVerifyNetwork(*msg);
+
     threads.start_thinking(options, pos, states, limits);
 }
 void Engine::stop() { threads.stop = true; }
@@ -168,6 +185,10 @@ void Engine::search_clear() {
 
     // TODO: does not work with multiple instances
     Tablebases::init(options["SyzygyPath"]);  // Free mapped files
+
+    // ChessChallendIII: re-attest after (re)initialising the tablebases.
+    if (const auto msg = verify_tb_ceiling(); msg.has_value())
+        onVerifyNetwork(*msg);
 }
 
 void Engine::set_on_update_no_moves(std::function<void(const Engine::InfoShort&)>&& f) {
@@ -262,6 +283,28 @@ void Engine::set_tt_size(usize mb) {
 }
 
 void Engine::set_ponderhit(bool b) { threads.main_manager()->ponder = b; }
+
+// tablebase related
+
+// ChessChallendIII: attest the Rule 4 five-piece ceiling. Returns a violation
+// message or a single-line OK attestation; never two lines (print_info_string
+// splits on newlines and each fragment becomes its own `info string`).
+std::optional<std::string> Engine::verify_tb_ceiling() const {
+    const int probe_limit     = int(options["SyzygyProbeLimit"]);
+    const int max_loaded      = Tablebases::MaxCardinality;
+    const int ceiling         = Tablebases::TB_PROBE_LIMIT;
+
+    // 0 is compliant: the tablebase is simply disabled.
+    if (probe_limit > ceiling)
+        return "TB CEILING VIOLATION: SyzygyProbeLimit=" + std::to_string(probe_limit)
+             + " exceeds the Rule 4 ceiling " + std::to_string(ceiling);
+    if (max_loaded > ceiling)
+        return "TB CEILING VIOLATION: max_loaded=" + std::to_string(max_loaded)
+             + " exceeds the Rule 4 ceiling " + std::to_string(ceiling);
+
+    return "TB ceiling OK: SyzygyProbeLimit=" + std::to_string(probe_limit)
+         + " max_loaded=" + std::to_string(max_loaded);
+}
 
 // network related
 
