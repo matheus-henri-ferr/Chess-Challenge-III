@@ -1,0 +1,48 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": null,
+  "phases": [
+    {
+      "number": "1",
+      "name": "Foundation, Provenance & Frozen Contract",
+      "status": "pending"
+    },
+    {
+      "number": "2",
+      "name": "Console Protocol Spine",
+      "status": "pending"
+    },
+    {
+      "number": "3",
+      "name": "Clock Authority, Resilience & Rule-Ceiling Guards",
+      "status": "pending"
+    },
+    {
+      "number": "4",
+      "name": "Authored Time Manager",
+      "status": "pending"
+    },
+    {
+      "number": "5",
+      "name": "Match Policy, Ponder & Calibration (conditional)",
+      "status": "pending"
+    },
+    {
+      "number": "6",
+      "name": "Adversarial Verification & Dress Rehearsal",
+      "status": "pending"
+    },
+    {
+      "number": "7",
+      "name": "Game-Day Operations & Authorship Defense",
+      "status": "pending"
+    }
+  ],
+  "next": {
+    "command": "/gsd-progress --next",
+    "label": "Advance to the next step",
+    "reason": "Phase 1 of 7 · 0% · executing"
+  },
+  "updated_at": "2026-10-27T01:01:40.190Z"
+}
