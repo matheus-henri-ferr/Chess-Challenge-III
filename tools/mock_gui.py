@@ -17,7 +17,8 @@ The driver sends ONLY the frozen `go` literal of PROTOCOL §3.1:
     go wtime <int_ms> btime <int_ms> winc 10000 binc 10000
 (ponder variant under --ponder), and maintains exactly one outstanding `go`.
 
-Per-move CSV columns: ply,side,uci,depth,nodes,score,time_ms,pv,tm_trace,think_ms
+Per-move CSV columns: move_no,side,uci,depth,nodes,score,engine_ms,wall_ms,pv,tm_trace
+(the eight mandatory LOGBOOK §2 keys plus the TM trace).
 """
 
 import argparse
@@ -33,6 +34,11 @@ import time
 GO_LITERAL = "go wtime <int_ms> btime <int_ms> winc 10000 binc 10000"
 
 OPENING_BOOK = ["e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6", "b5a4", "g8f6"]
+
+# The per-move CSV header, exposed as data: tests assert it carries every
+# LOGBOOK §2 key. Order: identity, search fields, wall/engine time, PV, TM.
+CSV_COLUMNS = ["move_no", "side", "uci", "depth", "nodes", "score",
+               "engine_ms", "wall_ms", "pv", "tm_trace"]
 
 
 class EngineProc:
@@ -143,19 +149,19 @@ class Game:
             elif line.startswith("info string tm="):
                 tm = line[len("info string "):]
             elif line.startswith("bestmove"):
-                think_ms = (time.monotonic_ns() - t0) // 1_000_000
+                wall_ms = (time.monotonic_ns() - t0) // 1_000_000
                 mv = bestmove_of(line)
                 self.rows.append({
-                    "ply": len(moves) + 1,
+                    "move_no": (len(moves) + 2) // 2,
                     "side": "w" if len(moves) % 2 == 0 else "b",
                     "uci": mv,
                     "depth": depth,
                     "nodes": nodes,
                     "score": score,
-                    "time_ms": time_ms,
+                    "engine_ms": time_ms,
+                    "wall_ms": wall_ms,
                     "pv": pv,
                     "tm_trace": tm,
-                    "think_ms": think_ms,
                 })
                 return mv
 
@@ -170,7 +176,7 @@ class Game:
             if mv == "(none)":
                 break
             moves.append(mv)
-            clocks[side_idx] += inc - int(self.rows[-1]["time_ms"])
+            clocks[side_idx] += inc - int(self.rows[-1]["wall_ms"])
             clocks[side_idx] = max(clocks[side_idx], 0)
             # book: keep the scripted opening legal-ish for BOTH mocks
             if len(moves) >= len(OPENING_BOOK):
@@ -193,6 +199,8 @@ def parse_args():
     p.add_argument("--ponder", action="store_true")
     p.add_argument("--require-tm", action="store_true",
                    help="launch engine with --tm-trace and assert tm= on every search")
+    p.add_argument("--engine-arg", action="append", default=[],
+                   help="extra flag passed to the engine, e.g. --engine-arg=--delay-ms=2800")
     p.add_argument("--record", default=None, help="JSONL transcript path")
     p.add_argument("--csv", default=None, help="per-move CSV path")
     return p.parse_args()
@@ -201,9 +209,9 @@ def parse_args():
 def main() -> int:
     args = parse_args()
     if args.engine.endswith(".py"):
-        engine_argv = [sys.executable, args.engine]
+        engine_argv = [sys.executable, args.engine, *args.engine_arg]
     else:
-        engine_argv = [args.engine]
+        engine_argv = [args.engine, *args.engine_arg]
 
     minutes, inc_s = args.tc.split(":")
     base_ms = int(float(minutes) * 60_000)
@@ -241,13 +249,15 @@ def main() -> int:
     # Driver invariants (self-asserting contract checks)
     if args.require_tm:
         for r in all_rows:
-            assert r["tm_trace"], f"missing tm= trace on ply {r['ply']}: {r}"
+            assert r["tm_trace"], f"missing tm= trace on move {r['move_no']}: {r}"
     for r in all_rows:
         assert int(r["depth"]) >= 0 and int(r["nodes"]) >= 0
+        assert int(r["wall_ms"]) >= int(r["engine_ms"]), \
+            f"wall_ms >= engine_ms violated: {r}"
 
     if args.csv:
         with open(args.csv, "w", newline="", encoding="utf-8") as fh:
-            writer = csv.DictWriter(fh, fieldnames=list(all_rows[0].keys()))
+            writer = csv.DictWriter(fh, fieldnames=CSV_COLUMNS)
             writer.writeheader()
             writer.writerows(all_rows)
 

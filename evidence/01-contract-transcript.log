@@ -27,9 +27,10 @@
 > quit
 # quit
 
-# ==== Task 2: mock_gui drives mock_engine, 2 games, --require-tm ====
+
+# ==== Task 2: mock_gui drives mock_engine, 2 games, --require-tm, --engine-arg=--delay-ms=2800 ====
 # rendered from --record JSONL: '>' = stdin to engine, '<' = stdout from engine
---- session 1: PYTHONPATH=vendor python3 tools/mock_gui.py --engine tools/mock_engine.py --games 2 --tc 15:10 --require-tm ---
+# CSV: move_no,side,uci,depth,nodes,score,engine_ms,wall_ms,pv,tm_trace (16 rows)
 > uci
 < id name MockEngine 1.0 (ChessChallendIII contract mock)
 < id author ChessChallendIII
@@ -46,56 +47,56 @@
 > go wtime 900000 btime 900000 winc 10000 binc 10000
 < info depth 9 seldepth 15 multipv 1 score cp 3 nodes 800000 nps 2100000 hashfull 309 tbhits 0 time 380 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info depth 13 seldepth 19 multipv 1 score cp -1 nodes 2400000 nps 2100000 hashfull 313 tbhits 0 time 1142 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
-< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 5600000 nps 2100000 hashfull 316 tbhits 0 time 2666 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
+< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 5600000 nps 2100000 hashfull 316 tbhits 0 time 1866 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info string tm=custom-v1.0 mode=increment latency_p95_ms=12 bank_ms=4500 budget_ms=18000 reason=reserve
 < bestmove e2e4
 > position startpos moves e2e4
-> go wtime 907334 btime 900000 winc 10000 binc 10000
+> go wtime 907200 btime 900000 winc 10000 binc 10000
 < info depth 9 seldepth 15 multipv 1 score cp 3 nodes 831000 nps 2100000 hashfull 309 tbhits 0 time 395 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info depth 13 seldepth 19 multipv 1 score cp -1 nodes 2493000 nps 2100000 hashfull 313 tbhits 0 time 1187 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
-< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 5817000 nps 2100000 hashfull 316 tbhits 0 time 2770 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
+< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 5817000 nps 2100000 hashfull 316 tbhits 0 time 1866 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info string tm=custom-v1.0 mode=increment latency_p95_ms=12 bank_ms=4500 budget_ms=18000 reason=reserve
 < bestmove e7e5
 > position startpos moves e2e4 e7e5
-> go wtime 907334 btime 907230 winc 10000 binc 10000
+> go wtime 907200 btime 907198 winc 10000 binc 10000
 < info depth 9 seldepth 15 multipv 1 score cp 3 nodes 862000 nps 2100000 hashfull 309 tbhits 0 time 410 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info depth 13 seldepth 19 multipv 1 score cp -1 nodes 2586000 nps 2100000 hashfull 313 tbhits 0 time 1231 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
-< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6034000 nps 2100000 hashfull 316 tbhits 0 time 2873 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
+< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6034000 nps 2100000 hashfull 316 tbhits 0 time 1866 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info string tm=custom-v1.0 mode=increment latency_p95_ms=12 bank_ms=4500 budget_ms=18000 reason=reserve
 < bestmove g1f3
 > position startpos moves e2e4 e7e5 g1f3
-> go wtime 914461 btime 907230 winc 10000 binc 10000
+> go wtime 914400 btime 907198 winc 10000 binc 10000
 < info depth 9 seldepth 15 multipv 1 score cp 3 nodes 893000 nps 2100000 hashfull 309 tbhits 0 time 425 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info depth 13 seldepth 19 multipv 1 score cp -1 nodes 2679000 nps 2100000 hashfull 313 tbhits 0 time 1275 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
-< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6251000 nps 2100000 hashfull 316 tbhits 0 time 2976 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
+< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6251000 nps 2100000 hashfull 316 tbhits 0 time 1866 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info string tm=custom-v1.0 mode=increment latency_p95_ms=12 bank_ms=4500 budget_ms=18000 reason=reserve
 < bestmove b8c6
 > position startpos moves e2e4 e7e5 g1f3 b8c6
-> go wtime 914461 btime 914254 winc 10000 binc 10000
+> go wtime 914400 btime 914398 winc 10000 binc 10000
 < info depth 9 seldepth 15 multipv 1 score cp 3 nodes 924000 nps 2100000 hashfull 309 tbhits 0 time 440 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info depth 13 seldepth 19 multipv 1 score cp -1 nodes 2772000 nps 2100000 hashfull 313 tbhits 0 time 1320 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
-< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6468000 nps 2100000 hashfull 316 tbhits 0 time 3080 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
+< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6468000 nps 2100000 hashfull 316 tbhits 0 time 1866 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info string tm=custom-v1.0 mode=increment latency_p95_ms=12 bank_ms=4500 budget_ms=18000 reason=reserve
 < bestmove f1b5
 > position startpos moves e2e4 e7e5 g1f3 b8c6 f1b5
-> go wtime 921381 btime 914254 winc 10000 binc 10000
+> go wtime 921600 btime 914398 winc 10000 binc 10000
 < info depth 9 seldepth 15 multipv 1 score cp 3 nodes 955000 nps 2100000 hashfull 309 tbhits 0 time 454 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info depth 13 seldepth 19 multipv 1 score cp -1 nodes 2865000 nps 2100000 hashfull 313 tbhits 0 time 1364 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
-< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6685000 nps 2100000 hashfull 316 tbhits 0 time 3183 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
+< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6685000 nps 2100000 hashfull 316 tbhits 0 time 1866 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info string tm=custom-v1.0 mode=increment latency_p95_ms=12 bank_ms=4500 budget_ms=18000 reason=reserve
 < bestmove a7a6
 > position startpos moves e2e4 e7e5 g1f3 b8c6 f1b5 a7a6
-> go wtime 921381 btime 921071 winc 10000 binc 10000
+> go wtime 921600 btime 921597 winc 10000 binc 10000
 < info depth 9 seldepth 15 multipv 1 score cp 3 nodes 986000 nps 2100000 hashfull 309 tbhits 0 time 469 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info depth 13 seldepth 19 multipv 1 score cp -1 nodes 2958000 nps 2100000 hashfull 313 tbhits 0 time 1408 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
-< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6902000 nps 2100000 hashfull 316 tbhits 0 time 3286 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
+< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6902000 nps 2100000 hashfull 316 tbhits 0 time 1866 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info string tm=custom-v1.0 mode=increment latency_p95_ms=12 bank_ms=4500 budget_ms=18000 reason=reserve
 < bestmove b5a4
 > position startpos moves e2e4 e7e5 g1f3 b8c6 f1b5 a7a6 b5a4
-> go wtime 928095 btime 921071 winc 10000 binc 10000
+> go wtime 928800 btime 921597 winc 10000 binc 10000
 < info depth 9 seldepth 15 multipv 1 score cp 3 nodes 1017000 nps 2100000 hashfull 309 tbhits 0 time 484 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info depth 13 seldepth 19 multipv 1 score cp -1 nodes 3051000 nps 2100000 hashfull 313 tbhits 0 time 1452 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
-< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 7119000 nps 2100000 hashfull 316 tbhits 0 time 3390 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
+< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 7119000 nps 2100000 hashfull 316 tbhits 0 time 1866 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info string tm=custom-v1.0 mode=increment latency_p95_ms=12 bank_ms=4500 budget_ms=18000 reason=reserve
 < bestmove g8f6
 > ucinewgame
@@ -103,56 +104,56 @@
 > go wtime 900000 btime 900000 winc 10000 binc 10000
 < info depth 9 seldepth 15 multipv 1 score cp 3 nodes 800000 nps 2100000 hashfull 309 tbhits 0 time 380 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info depth 13 seldepth 19 multipv 1 score cp -1 nodes 2400000 nps 2100000 hashfull 313 tbhits 0 time 1142 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
-< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 5600000 nps 2100000 hashfull 316 tbhits 0 time 2666 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
+< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 5600000 nps 2100000 hashfull 316 tbhits 0 time 1866 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info string tm=custom-v1.0 mode=increment latency_p95_ms=12 bank_ms=4500 budget_ms=18000 reason=reserve
 < bestmove e2e4
 > position startpos moves e2e4
-> go wtime 907334 btime 900000 winc 10000 binc 10000
+> go wtime 907200 btime 900000 winc 10000 binc 10000
 < info depth 9 seldepth 15 multipv 1 score cp 3 nodes 831000 nps 2100000 hashfull 309 tbhits 0 time 395 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info depth 13 seldepth 19 multipv 1 score cp -1 nodes 2493000 nps 2100000 hashfull 313 tbhits 0 time 1187 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
-< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 5817000 nps 2100000 hashfull 316 tbhits 0 time 2770 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
+< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 5817000 nps 2100000 hashfull 316 tbhits 0 time 1866 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info string tm=custom-v1.0 mode=increment latency_p95_ms=12 bank_ms=4500 budget_ms=18000 reason=reserve
 < bestmove e7e5
 > position startpos moves e2e4 e7e5
-> go wtime 907334 btime 907230 winc 10000 binc 10000
+> go wtime 907200 btime 907200 winc 10000 binc 10000
 < info depth 9 seldepth 15 multipv 1 score cp 3 nodes 862000 nps 2100000 hashfull 309 tbhits 0 time 410 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info depth 13 seldepth 19 multipv 1 score cp -1 nodes 2586000 nps 2100000 hashfull 313 tbhits 0 time 1231 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
-< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6034000 nps 2100000 hashfull 316 tbhits 0 time 2873 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
+< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6034000 nps 2100000 hashfull 316 tbhits 0 time 1866 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info string tm=custom-v1.0 mode=increment latency_p95_ms=12 bank_ms=4500 budget_ms=18000 reason=reserve
 < bestmove g1f3
 > position startpos moves e2e4 e7e5 g1f3
-> go wtime 914461 btime 907230 winc 10000 binc 10000
+> go wtime 914399 btime 907200 winc 10000 binc 10000
 < info depth 9 seldepth 15 multipv 1 score cp 3 nodes 893000 nps 2100000 hashfull 309 tbhits 0 time 425 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info depth 13 seldepth 19 multipv 1 score cp -1 nodes 2679000 nps 2100000 hashfull 313 tbhits 0 time 1275 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
-< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6251000 nps 2100000 hashfull 316 tbhits 0 time 2976 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
+< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6251000 nps 2100000 hashfull 316 tbhits 0 time 1866 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info string tm=custom-v1.0 mode=increment latency_p95_ms=12 bank_ms=4500 budget_ms=18000 reason=reserve
 < bestmove b8c6
 > position startpos moves e2e4 e7e5 g1f3 b8c6
-> go wtime 914461 btime 914254 winc 10000 binc 10000
+> go wtime 914399 btime 914399 winc 10000 binc 10000
 < info depth 9 seldepth 15 multipv 1 score cp 3 nodes 924000 nps 2100000 hashfull 309 tbhits 0 time 440 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info depth 13 seldepth 19 multipv 1 score cp -1 nodes 2772000 nps 2100000 hashfull 313 tbhits 0 time 1320 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
-< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6468000 nps 2100000 hashfull 316 tbhits 0 time 3080 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
+< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6468000 nps 2100000 hashfull 316 tbhits 0 time 1866 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info string tm=custom-v1.0 mode=increment latency_p95_ms=12 bank_ms=4500 budget_ms=18000 reason=reserve
 < bestmove f1b5
 > position startpos moves e2e4 e7e5 g1f3 b8c6 f1b5
-> go wtime 921381 btime 914254 winc 10000 binc 10000
+> go wtime 921599 btime 914399 winc 10000 binc 10000
 < info depth 9 seldepth 15 multipv 1 score cp 3 nodes 955000 nps 2100000 hashfull 309 tbhits 0 time 454 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info depth 13 seldepth 19 multipv 1 score cp -1 nodes 2865000 nps 2100000 hashfull 313 tbhits 0 time 1364 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
-< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6685000 nps 2100000 hashfull 316 tbhits 0 time 3183 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
+< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6685000 nps 2100000 hashfull 316 tbhits 0 time 1866 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info string tm=custom-v1.0 mode=increment latency_p95_ms=12 bank_ms=4500 budget_ms=18000 reason=reserve
 < bestmove a7a6
 > position startpos moves e2e4 e7e5 g1f3 b8c6 f1b5 a7a6
-> go wtime 921381 btime 921071 winc 10000 binc 10000
+> go wtime 921599 btime 921598 winc 10000 binc 10000
 < info depth 9 seldepth 15 multipv 1 score cp 3 nodes 986000 nps 2100000 hashfull 309 tbhits 0 time 469 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info depth 13 seldepth 19 multipv 1 score cp -1 nodes 2958000 nps 2100000 hashfull 313 tbhits 0 time 1408 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
-< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6902000 nps 2100000 hashfull 316 tbhits 0 time 3286 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
+< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 6902000 nps 2100000 hashfull 316 tbhits 0 time 1866 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info string tm=custom-v1.0 mode=increment latency_p95_ms=12 bank_ms=4500 budget_ms=18000 reason=reserve
 < bestmove b5a4
 > position startpos moves e2e4 e7e5 g1f3 b8c6 f1b5 a7a6 b5a4
-> go wtime 928095 btime 921071 winc 10000 binc 10000
+> go wtime 928799 btime 921598 winc 10000 binc 10000
 < info depth 9 seldepth 15 multipv 1 score cp 3 nodes 1017000 nps 2100000 hashfull 309 tbhits 0 time 484 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info depth 13 seldepth 19 multipv 1 score cp -1 nodes 3051000 nps 2100000 hashfull 313 tbhits 0 time 1452 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
-< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 7119000 nps 2100000 hashfull 316 tbhits 0 time 3390 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
+< info depth 16 seldepth 22 multipv 1 score cp -4 nodes 7119000 nps 2100000 hashfull 316 tbhits 0 time 1866 pv e2e4 e7e5 g1f3 b8c6 f1b5 g8f6 d2d3 f8c5
 < info string tm=custom-v1.0 mode=increment latency_p95_ms=12 bank_ms=4500 budget_ms=18000 reason=reserve
 < bestmove g8f6
 > quit

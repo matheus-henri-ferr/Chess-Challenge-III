@@ -121,11 +121,16 @@ class MockEngine:
 
         # A real engine emits one deepest-first info script. Keep it honest:
         # depth strictly increases, then exactly one bestmove (PROTOCOL §7.1).
+        # The reported `time` must stay <= wall-clock: it counts only from the
+        # first info emission (t=0 here), while the wall clock also covers the
+        # caller-side --delay-ms latency. Engine-reported time is capped at
+        # 2/3 of that delay so wall_ms >= engine_ms always holds (LOGBOOK §2.2).
+        max_engine_ms = max(1, int(self.args.delay_ms * 2 / 3)) if self.args.delay_ms else 0
         base_nodes = 800_000 + 31_000 * len(self.moves)
         for depth, mult in ((9, 1), (13, 3), (16, 7)):
             nodes = base_nodes * mult
             nps = 2_100_000
-            t_ms = int(nodes / nps * 1000)
+            t_ms = min(int(nodes / nps * 1000), max_engine_ms) if max_engine_ms else int(nodes / nps * 1000)
             pv = self.pv_for(depth)
             self.send(f"info depth {depth} seldepth {depth + 6} multipv 1 "
                       f"score cp {12 - depth} nodes {nodes} nps {nps} "
