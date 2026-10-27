@@ -56,7 +56,7 @@ patterns-established:
   - "Scripted UCI stub via python3 -c for discard-ordering injection"
   - "Frozen literals as importable module data asserted across doc/mock/console"
 
-requirements-completed: [PROTO-04]
+requirements-completed: []  # PROTO-04 blocked by shared-ID gate #2388: 02-02 also declares it; flips Complete when 02-02's SUMMARY lands
 
 coverage:
   - id: D1
@@ -225,3 +225,11 @@ None - no external service configuration required.
 ---
 *Phase: 02-console-protocol-spine*
 *Completed: 2026-10-27*
+
+## Self-Check: PASSED
+
+- key-files.created all exist on disk (6/6 `[ -f ]`)
+- `gsd_run check evaluation-scope --plan 02-01 --commits-only --raw` → status `resolved`, 8 commits on this branch (RC=0)
+- All per-task acceptance criteria re-run: PASS (Task 1: GO_LITERAL grep + smoke rc=0 + 4 transcript greps; Task 2: 5 grep-able symbols + 9-test suite + no setoption between go/bestmove in record; Task 3: ConsoleSourceTests + 19-test contract suite + `OK CONTRACT ORDER`)
+- Plan-level `<verification>` re-run after all commits: smoke `OK transport smoke: 5 wire facts confirmed` rc=0; console suite OK; tools.tests.test_contract 19 OK; `OK CONTRACT ORDER`
+- Shared-ID gate (#2388): `requirements.ready-ids` → PROTO-04 blocked (02-02 also declares it, no SUMMARY yet) — left Pending, not marked
