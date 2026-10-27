@@ -14,7 +14,7 @@ ARCH:                         x86-64-avxvnni
 Compiler:                     g++ (GNUC) 16.2.1 on Linux
 Compilation settings:         64bit VNNI BMI2 AVX2 SSE41 SSSE3 SSE2 POPCNT
 Bench nodes:                  2497913
-Binary sha256:                795056df4461712fdcf10b5da4b95bd0e3d235251665fd9a1fb39f65b4e0b294
+Binary sha256:                527fa7ac4a23e124d207ebe342bbf0cf7c379277770a4073964ef17ce6ed5134
 NNUE net:                     nn-1a298aa575a0.nnue
 NNUE net sha256:              1a298aa575a085434d29027978dc36867fe9c5bcea9376654b7a8eba1e52dfc2
 Modified files:
@@ -58,8 +58,10 @@ commit to the same hash. The named commit is the HEAD of the last committed
 evidence run; later doc-only commits do not change the binary. History: the
 stock (unmodified sf_19) binary hashed 077d3601… and is archived in
 RELEASE/stock-binary/ with its own SHA256SUMS; the TB-ceiling guard (01-03)
-changed the hash to the value above with bench unchanged. A `profile-build` of
-the same tree produces a different hash with identical bench nodes; if the
-shipped binary is a profile-build, record its own hash and profile here.
+changed the hash (795056df…), and the code-review fixes for that guard (DTZ-only
+filename scan, CR-01) produced the hash above — bench unchanged throughout. A
+`profile-build` of the same tree produces a different hash with identical bench
+nodes; if the shipped binary is a profile-build, record its own hash and
+profile here.
 
 License: GPL-3.0-or-later. See Copying.txt and NOTICE.

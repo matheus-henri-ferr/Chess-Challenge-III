@@ -1,5 +1,5 @@
 # ChessChallendIII binary identities (plan 01-01 Task 3)
 # line 1 = working-tree binary at HEAD, clean objclean rebuild (the artifact 01-03 gates on)
 # line 2 = namespace-severed fresh-clone build (the offline proof)
-795056df4461712fdcf10b5da4b95bd0e3d235251665fd9a1fb39f65b4e0b294
-795056df4461712fdcf10b5da4b95bd0e3d235251665fd9a1fb39f65b4e0b294
+527fa7ac4a23e124d207ebe342bbf0cf7c379277770a4073964ef17ce6ed5134
+527fa7ac4a23e124d207ebe342bbf0cf7c379277770a4073964ef17ce6ed5134
