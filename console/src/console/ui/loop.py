@@ -81,6 +81,7 @@ class OperatorLoop:
             self.stdin = sys.stdin
             self.stdin_fd = self.stdin.fileno()
         self._quit = False
+        self._stdin_buf = b""  # bytes read past the first newline (piped input)
         self._announced = None  # last ANNOUNCE (confirmation gate state)
 
     # --- output helpers -----------------------------------------------------
@@ -221,20 +222,46 @@ class OperatorLoop:
         return 0
 
     def _read_line(self):
-        """One line from the raw fd (os.read → own buffer semantics)."""
+        """One line from the raw fd (os.read → own buffer semantics).
+
+        Leftover bytes read past the first newline stay in `self._stdin_buf`
+        and are consumed first on the next call — a piped/typed-ahead script
+        must reach handle_line line-by-line, never be truncated at the
+        first os.read (a discarded remainder silently loses operator input
+        queued behind the first line).
+        """
         import os
-        chunks = b""
+        if b"\n" in self._stdin_buf:  # drain the buffer before reading fd
+            head, self._stdin_buf = self._stdin_buf.split(b"\n", 1)
+            return head.decode(errors="replace").rstrip("\r")
+        chunks = self._stdin_buf
+        self._stdin_buf = b""
         while b"\n" not in chunks:
+            if self.stdin_fd is None:  # scripted source: buffer is all there is
+                line = chunks.decode(errors="replace").rstrip("\r") \
+                    if chunks else None
+                chunks = b""
+                return line[:4096] if line else None
             try:
                 chunk = os.read(self.stdin_fd, 4096)
             except OSError:
+                self._stdin_buf = chunks  # keep for the next call
                 return None
             if not chunk:
+                if chunks:  # no trailing newline: last unterminated line
+                    line = chunks.decode(errors="replace").rstrip("\r")
+                    chunks = b""
+                    self._stdin_buf = b""
+                    return line[:4096]
                 return None  # EOF
             chunks += chunk
             if len(chunks) > 8192:  # hostile paste guard
-                return chunks.split(b"\n")[0].decode(errors="replace")[:4096]
-        return chunks.split(b"\n", 1)[0].decode(errors="replace").rstrip("\r")
+                head, rest = chunks.split(b"\n", 1)
+                self._stdin_buf = rest[:8192]
+                return head.decode(errors="replace")[:4096]
+        head, rest = chunks.split(b"\n", 1)
+        self._stdin_buf = rest[:8192]
+        return head.decode(errors="replace").rstrip("\r")
 
     def _shutdown(self):
         """EOF/`q`: stop-if-searching, then close (PROTOCOL §1.5 order)."""

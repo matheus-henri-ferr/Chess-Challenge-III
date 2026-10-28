@@ -502,6 +502,26 @@ class LoopTests(unittest.TestCase):
         self.assertIn("undone: e2e4", out)
         self.assertEqual(s.board.moves, [])
 
+    def test_piped_multiline_stdin_reaches_handle_line(self):
+        # Regression (02-04 piped smoke): a typed-ahead script arrives in
+        # ONE os.read; lines past the first must be buffered and consumed
+        # line-by-line, never discarded — the smoke feeds 'e7e5\nu\n…\nq'
+        # and every line must reach handle_line.
+        import io
+        s, t, o = make_session(our="w")
+        loop = OperatorLoop(s, t, stdin=io.StringIO(),
+                            stdout=io.StringIO())
+        loop._stdin_buf = b"e7e5\nu\nq\n"
+        loop.stdin_fd = None  # no real fd: buffered lines only, then EOF
+        first = loop._read_line()
+        second = loop._read_line()
+        third = loop._read_line()
+        fourth = loop._read_line()
+        self.assertEqual((first, second, third, fourth),
+                         ("e7e5", "u", "q", None),
+                         "buffered lines must be consumed in order, "
+                         "then EOF")
+
     def test_parse_clock_token_forms(self):
         from console.ui.loop import parse_clock_token
         self.assertEqual(parse_clock_token("7:42"), 462000)
