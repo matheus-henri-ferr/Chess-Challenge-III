@@ -648,5 +648,92 @@ class UndoRealignmentTests(unittest.TestCase):
         self.assertIn("nothing to undo", loop.stdout.getvalue())
 
 
+class TimingAnomalyTests(unittest.TestCase):
+    """CR-06: a lying engine_ms (stale info time > wall delta) must clamp +
+    journal an anomaly — never an AssertionError that drain_events swallows,
+    silently dropping the MOVE_LOGGED row."""
+
+    def test_stale_engine_ms_is_clamped_and_journaled(self):
+        board = BoardState()
+        board.try_push_token("e2e4")
+        board.try_push_token("e7e5")
+        s, t, o = make_session(our="w", board=board)
+        s.state = Session.OUR_SEARCH
+        s.last_info = {"depth": 9, "nodes": 50000, "score": "cp 30",
+                       "time": 999999, "pv": "g1f3"}
+        s.search_t0_ms = s._wall_ms_now()  # fresh anchor: wall delta ≈ 0
+        t.events.put({"type": "bestmove", "move": "g1f3", "ponder": None,
+                      "search_id": t.search_id})
+        pump(s, t, until=lambda fed: "bestmove" in fed)
+        rows = [r for r in o["sink"] if r.get("e") == "MOVE_LOGGED"]
+        self.assertEqual(len(rows), 1,
+                         "the row is never silently lost")
+        self.assertGreaterEqual(rows[0]["wall_ms"], rows[0]["engine_ms"])
+        faults = [r for r in o["sink"] if r.get("e") == "ENGINE_FAULT"]
+        self.assertEqual(len(faults), 1, o["sink"])
+        self.assertIn("CR-06", faults[0]["reason"])
+        self.assertEqual(s.state, Session.ANNOUNCE_PENDING,
+                         "FSM advances on every path (the assert skipped it)")
+
+
+class DrainFaultTests(unittest.TestCase):
+    """CR-10: a handler exception journals ENGINE_FAULT with traceback and
+    the drain CONTINUES — never an aborting bare except with zero evidence."""
+
+    def test_handler_exception_journals_fault_and_keeps_draining(self):
+        board = BoardState()
+        s, t, o = make_session(our="w", board=board)
+        calls = []
+
+        def raising_on_first(event):
+            calls.append(event.get("type"))
+            if len(calls) == 1:
+                raise KeyError("boom")
+        s.on_engine_event = raising_on_first
+        loop = OperatorLoop(s, t, stdin=io.StringIO(),
+                            stdout=io.StringIO())
+        loop.session = _DrainSessionDouble(s, o)
+        t.events.put({"type": "info", "depth": 1})
+        t.events.put({"type": "info", "depth": 2})
+        loop.drain_events()  # must not raise
+        self.assertEqual(calls, ["info", "info"],
+                         "the second event must still be dispatched")
+        faults = [r for r in o["sink"] if r.get("e") == "ENGINE_FAULT"]
+        self.assertEqual(len(faults), 1, o["sink"])
+        self.assertIn("traceback", faults[0])
+        self.assertIn("KeyError", faults[0]["traceback"])
+        self.assertIn("event dispatch error", faults[0]["reason"])
+
+    def test_options_carry_no_placeholder_paths(self):
+        # CR-12 session half: the console never sends a path it knows is
+        # bogus — no option value equals "<empty>".
+        s, t, o = make_session(our="w")
+        for name, value in s.options:
+            self.assertNotEqual(value, "<empty>",
+                                f"placeholder path on {name}")
+        self.assertFalse([n for n, v in s.options if n == "SyzygyPath"],
+                         "no SyzygyPath option until 02-05's validated flag")
+
+
+class _DrainSessionDouble:
+    """Wraps a real session: overrides sink/display for fault assertions,
+    keeps on_engine_event dispatch (the drain's real consumer)."""
+
+    def __init__(self, session, o):
+        self._session = session
+        self._o = o
+        self.display_lines = []
+
+    @property
+    def sink(self):
+        return self._o["sink"].append
+
+    def display_cb(self, line):
+        self.display_lines.append(line)
+
+    def on_engine_event(self, event):
+        self._session.on_engine_event(event)
+
+
 if __name__ == "__main__":
     unittest.main()
