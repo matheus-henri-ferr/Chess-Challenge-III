@@ -217,7 +217,15 @@ class Session:
         elif etype == "eof":
             self._on_fault("engine EOF")
         elif etype == "timeout":
-            self._on_fault("engine read timeout")
+            # Read-timeout watchdog: a 30 s engine silence is a hang ONLY
+            # while a search is outstanding. In the idle-family states
+            # (IDLE / AWAIT_OPP_CONFIRM / ANNOUNCE_PENDING waiting on the
+            # operator, OPP_TURN waiting on the opponent) silence is the
+            # engine's normal rest state — faulting there spammed the
+            # operator with a phantom ENGINE FAULT every 30 s of a healthy
+            # game (UAT finding, test 2).
+            if self.state in (self.OUR_SEARCH, self.PONDERING):
+                self._on_fault("engine read timeout")
         elif etype == "garbage":
             self._on_fault(f"garbage on stdout: {event.get('line', '')!r}")
 
