@@ -3,23 +3,32 @@ status: testing
 phase: 02-console-protocol-spine
 source: [02-01-SUMMARY.md, 02-02-SUMMARY.md, 02-03-SUMMARY.md, 02-04-SUMMARY.md, 02-05-SUMMARY.md, 02-06-SUMMARY.md]
 started: 2026-10-28T19:00:00Z
-updated: 2026-10-28T19:00:00Z
+updated: 2026-10-28T20:10:00Z
 ---
 
 ## Current Test
 
-number: 1
-name: Undo survives a dead engine (the H-1 death drill)
+number: 2
+name: Interactive feel of the spine (live session)
 expected: |
-  Start a live console game against ./src/stockfish (python3 -m console.main --engine ./src/stockfish --our-color b --clock-ms w=600000,b=600000). Type an opponent move (e.g. e2e4). While OUR_SEARCH is running, kill the stockfish process (kill -9 <pid>). Then type `u` at the move> prompt.
-  Observe: a one-line `ENGINE FAULT: undo repair: …` notice (readable, not lost in scrollback), then `undone: e2e4` echo (or a fault line), and the `move>` prompt still accepting input. No traceback, no exit. A corrected opponent move is then accepted and the game continues.
+  Live session vs ./src/stockfish: wrong-side move shows readable reject; ANNOUNCE appears as `>> ANNOUNCE: <MOVE>` while idle; typos (Nf3, O-O, 0000, e2e5) get instant typed-error feedback; `t 7:42` renders the clock line.
 awaiting: user response
 
 ## Tests
 
 ### 1. Undo survives a dead engine (the H-1 death drill)
 expected: See above — fault line + undone echo + prompt alive, game continues after corrected move.
-result: pending
+result: pass
+notes: |
+  Operator run 2026-10-28, both shapes live vs real ./src/stockfish:
+  - Dead AFTER bestmove: u → undone e7e5 (engine ply popped), FEN right, prompt alive.
+  - Dead DURING search (form 1, timer pkill -x): u → undone e2e4, prompt alive, no traceback, no exit.
+  Typed reject rendering verified live (REJECTED malformed: 'ee2e4').
+  Post-undo ENGINE FAULT: engine read timeout x2 = hung-engine watchdog firing on the dead pipe
+  (reader by design re-arms the 30 s read timeout; in-process kill probe shows a clean single
+  eof event at t=0). Watchdog noise, not a defect; state landed functional (AWAIT_OPP_CONFIRM/IDLE).
+  Two UAT-found console bugs fixed during this test: prompt re-print per idle tick (e259879c),
+  display_cb/announce_cb never wired in main.py — REJECT + >> ANNOUNCE invisible (382ac198).
 
 ### 2. Interactive feel of the spine (live session)
 expected: Run a live session vs ./src/stockfish. Wrong-side move typing shows a readable reject cue; ANNOUNCE appears while idle as `>> ANNOUNCE: <MOVE>` (visually distinct, uppercase, hyphenated); prompt survives typos (Nf3, O-O, 0000, e2e5) with instant typed-error feedback; clock line renders on `t 7:42`.
@@ -32,9 +41,9 @@ result: pending
 ## Summary
 
 total: 3
-passed: 0
+passed: 1
 issues: 0
-pending: 3
+pending: 2
 skipped: 0
 
 ## Gaps
