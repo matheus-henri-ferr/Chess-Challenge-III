@@ -158,6 +158,11 @@ class MoveLog:
         if note is not None:
             fh.write(f"# final-clocks-note {note}\n")
         if log_path is not None:
+            # §5.2: the digest covers the bytes written so far — flush the
+            # buffered header+rows BEFORE reading the file back, or the
+            # reader sees a truncated (here: empty) file and logs the
+            # empty-input hash.
+            fh.flush()
             digest = hashlib.sha256()
             with open(log_path, "rb") as rf:
                 for chunk in iter(lambda: rf.read(1 << 20), b""):
