@@ -1,0 +1,38 @@
+{
+  "plan": "02-06",
+  "command": "PYTHONPATH=vendor:console/src python3 -m unittest console.tests.test_session -v",
+  "exitCode": 1,
+  "summary": "Ran 30 tests in 1.372s — FAILED (failures=1, errors=3)",
+  "targetTests": [
+    {
+      "targetTest": "console.tests.test_session.UndoPromptSurvivalTests.test_stop_send_raises_engine_dead_prompt_survives",
+      "targetFile": "console/tests/test_session.py",
+      "outcome": "ERROR",
+      "expected": "undo_last_ply returns 'e7e5' with an ENGINE_FAULT (stop send failed) on the sink, transport.outstanding cleared, RESYNC(applied, plies=1, via=undo) present, session usable afterwards",
+      "actual": "RuntimeError: engine exited rc=-9 escapes undo_last_ply (session.py:385 self.transport.send(\"stop\"))"
+    },
+    {
+      "targetTest": "console.tests.test_session.UndoPromptSurvivalTests.test_eof_before_owed_bestmove_journaled_and_survives",
+      "targetFile": "console/tests/test_session.py",
+      "outcome": "ERROR",
+      "expected": "undo completes; eof event journalled as ENGINE_FAULT evidence; outstanding cleared; RESYNC present; no MOVE_LOGGED",
+      "actual": "RuntimeError: engine EOF before the owed bestmove escapes _consume_owed_bestmove (session.py:466) — uncaught by except queue.Empty"
+    },
+    {
+      "targetTest": "console.tests.test_session.UndoPromptSurvivalTests.test_refire_send_raises_lands_idle_with_resync",
+      "targetFile": "console/tests/test_session.py",
+      "outcome": "ERROR",
+      "expected": "no exception escapes; ENGINE_FAULT naming re-fire failure; RESYNC present; state IDLE",
+      "actual": "RuntimeError: engine exited rc=-9 escapes via _start_search (session.py:402 → 153 transport.send(position_line))"
+    },
+    {
+      "targetTest": "console.tests.test_session.UndoRealignmentTests.test_a_undo_no_answer_to_stop_prompt_survives",
+      "targetFile": "console/tests/test_session.py",
+      "outcome": "FAIL",
+      "expected": "after the no-answer timeout, t.discarding is False and t.outstanding is None (L-1 + outstanding clearance)",
+      "actual": "AssertionError: True is not false : transport discarding cleared, not only the mirror"
+    }
+  ],
+  "semanticAssessment": "Valid RED: every target test executed, discovered, and failed on the planned behavioral assertion (uncaught RuntimeError on the three engine-death shapes; armed transport.discarding on the timeout path). Existing 26 tests stayed green — the failures are exclusively the new/extended cases.",
+  "note": "gsd_run CLI unavailable in this runtime; record persisted for the SUMMARY instead of gsd_run check tdd-red-evidence."
+}
