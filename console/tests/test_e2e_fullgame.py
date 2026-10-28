@@ -118,6 +118,37 @@ class RealEngineFullGameTests(unittest.TestCase):
         self.assertEqual(lint_log(golden), [])
 
 
+class TracerHeaderTruthTests(unittest.TestCase):
+    """CR-04 regression: the tracer's written header tells the truth.
+
+    After a mock-engine tracer run the log's `# time-control` line equals
+    the run's actual --clock-ms spec (format `M+S` from the ms values —
+    the e2e runs 60000/60000 = `1+0`, NOT a hardcoded 15+10), and
+    `# net-sha256` is a full 64-hex digest (not the 12-char prefix).
+    """
+
+    def test_mock_tracer_header_time_control_and_net_sha(self):
+        rc, out, tmp = run_console(
+            "tools/mock_engine.py", "w", "e2ehead",
+            auto_opp="e7e5 g8f6", max_plies=2, timeout=60,
+            clock_ms="w=60000,b=60000")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("OK fullgame", out)
+        log_path = pathlib.Path(tmp) / "game-e2ehead.log"
+        self.assertTrue(log_path.exists(), out)
+        lines = log_path.read_text(encoding="utf-8").splitlines()
+        tc = [ln for ln in lines if ln.startswith("# time-control")]
+        self.assertEqual(tc, ["# time-control 1+0"], lines)
+        net = [ln for ln in lines if ln.startswith("# net-sha256")]
+        self.assertEqual(len(net), 1, lines)
+        digest = net[0].removeprefix("# net-sha256 ").split()[0]
+        self.assertEqual(len(digest), 64, net[0])
+        self.assertTrue(all(c in "0123456789abcdef" for c in digest),
+                        net[0])
+        # The 12-char prefix + prose form is gone.
+        self.assertNotIn("1a298aa575a0 (", net[0])
+
+
 class TerminalRowTests(unittest.TestCase):
     """Terminal bestmove (none) emits a lint-clean src=none row (§4.6)."""
 
