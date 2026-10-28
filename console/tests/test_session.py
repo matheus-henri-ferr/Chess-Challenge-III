@@ -596,6 +596,18 @@ class UndoRealignmentTests(unittest.TestCase):
         self.assertEqual(len(faults), 1, o["sink"])
         self.assertIn("no bestmove to the stop", faults[0]["reason"])
         self.assertEqual(s.state, Session.AWAIT_OPP_CONFIRM)
+        # L-1 + outstanding clearance (plan 02-06 Task 1d): the timeout
+        # path must leave BOTH transport mirrors clear so the corrected
+        # re-entry cannot die on start_search's §1.3 guard.
+        self.assertFalse(t.discarding,
+                         "transport discarding cleared, not only the mirror")
+        self.assertIsNone(t.outstanding,
+                          "timeout path clears the outstanding go")
+        # The CR-01 corrected re-entry (the same idiom as test_a above).
+        move = s.on_operator_move("e7e6")
+        self.assertIsNotNone(move)
+        self.assertEqual(s.state, Session.OUR_SEARCH)
+        self.assertEqual(s.board.moves, ["e2e4", "e7e6"])
 
     def test_b_undo_without_outstanding_go_refires_search(self):
         board = BoardState()
@@ -646,6 +658,126 @@ class UndoRealignmentTests(unittest.TestCase):
         loop.handle_line("u")
         self.assertEqual(len(calls), 3)
         self.assertIn("nothing to undo", loop.stdout.getvalue())
+
+
+class UndoPromptSurvivalTests(unittest.TestCase):
+    """H-1 closure (plan 02-06): every engine-death shape during an
+    operator undo completes the realignment — zero escaping exceptions,
+    an ENGINE_FAULT record per failure mode, and the RESYNC(applied,
+    plies=1, via=undo) record journaled on every post-pop path."""
+
+    def test_stop_send_raises_engine_dead_prompt_survives(self):
+        # Death shape (a): the engine already exited when the operator
+        # types `u` — the real transport's send raises RuntimeError
+        # ("engine exited rc=-9", uci.py:192-193) instead of queueing.
+        board = BoardState()
+        board.try_push_token("e2e4")  # our w move on the replica
+        s, t, o = make_session(our="w", board=board)
+        s.on_operator_move("e7e5")  # opp move → OUR_SEARCH, go outstanding
+        self.assertEqual(s.state, Session.OUR_SEARCH)
+        self.assertIsNotNone(t.outstanding)
+
+        class DyingEngineTransport(FakeTransport):
+            """Models the dead-poll send at uci.py:192-193."""
+
+            def __init__(self, base):
+                self.__dict__.update(base.__dict__)
+
+            def send(self, line):
+                if self.dead:
+                    raise RuntimeError("engine exited rc=-9")
+                self.sent.append(line)
+
+        t.dead = False
+        dying = DyingEngineTransport(t)
+        s.transport = dying
+        dying.dead = True
+        removed = s.undo_last_ply()  # must NOT raise
+        self.assertEqual(removed, "e7e5")
+        faults = [r for r in o["sink"] if r.get("e") == "ENGINE_FAULT"]
+        self.assertEqual(len(faults), 1, o["sink"])
+        self.assertIn("stop send failed", faults[0]["reason"])
+        self.assertIsNone(dying.outstanding,
+                          "dead-stop path must clear the outstanding go")
+        resyncs = [r for r in o["sink"] if r.get("e") == "RESYNC"]
+        self.assertEqual(len(resyncs), 1, o["sink"])
+        self.assertEqual(resyncs[0]["phase"], "applied")
+        self.assertEqual(resyncs[0]["plies"], 1)
+        self.assertEqual(resyncs[0]["via"], "undo")
+        self.assertEqual(s.board.moves, ["e2e4"])
+        self.assertEqual(s.state, Session.AWAIT_OPP_CONFIRM)
+        self.assertIsNone(s.last_announced)
+        # The realignment leaves the session usable: engine healthy again.
+        dying.dead = False
+        move = s.on_operator_move("e7e6")
+        self.assertIsNotNone(move)
+        self.assertEqual(s.state, Session.OUR_SEARCH)
+        self.assertEqual(s.board.moves, ["e2e4", "e7e6"])
+
+    def test_eof_before_owed_bestmove_journaled_and_survives(self):
+        # Death shape (b): the engine dies between the stop and the owed
+        # bestmove — the reader queues {"type": "eof"} and
+        # _consume_owed_bestmove raises RuntimeError (session.py:466).
+        board = BoardState()
+        board.try_push_token("e2e4")
+        s, t, o = make_session(our="w", board=board)
+        s.on_operator_move("e7e5")
+        self.assertEqual(s.state, Session.OUR_SEARCH)
+        t.events.put({"type": "eof"})  # BEFORE the undo, as the reader does
+        removed = s.undo_last_ply()  # must NOT raise
+        self.assertEqual(removed, "e7e5")
+        faults = [r for r in o["sink"] if r.get("e") == "ENGINE_FAULT"]
+        self.assertEqual(len(faults), 1, o["sink"])
+        self.assertIn("EOF", faults[0]["reason"])
+        self.assertIn("owed bestmove", faults[0]["reason"])
+        self.assertIsNone(t.outstanding)
+        resyncs = [r for r in o["sink"] if r.get("e") == "RESYNC"]
+        self.assertEqual(len(resyncs), 1, o["sink"])
+        self.assertEqual(resyncs[0]["via"], "undo")
+        moves = [r for r in o["sink"] if r.get("e") == "MOVE_LOGGED"]
+        self.assertEqual(moves, [], "no phantom board advance after the pop")
+        self.assertFalse(t.discarding)
+        self.assertFalse(s.discarding)
+        self.assertEqual(s.state, Session.AWAIT_OPP_CONFIRM)
+
+    def test_refire_send_raises_lands_idle_with_resync(self):
+        # Death shape (c): no stop path exercised (search already answered
+        # → ANNOUNCE_PENDING, outstanding None); the death hits the
+        # re-fire _start_search after the pop.
+        board = BoardState()
+        board.try_push_token("e2e4")
+        board.try_push_token("e7e5")
+        s, t, o = make_session(our="w", board=board)
+        s.state = Session.OUR_SEARCH
+        t.events.put({"type": "bestmove", "move": "g1f3", "ponder": None,
+                      "search_id": t.search_id})
+        pump(s, t, until=lambda fed: "bestmove" in fed)
+        self.assertEqual(s.state, Session.ANNOUNCE_PENDING)
+        self.assertIsNone(t.outstanding)
+
+        class DyingRefireTransport(FakeTransport):
+            def __init__(self, base):
+                self.__dict__.update(base.__dict__)
+
+            def send(self, line):
+                if getattr(self, "dead", False) and line != "stop":
+                    raise RuntimeError("engine exited rc=-9")
+                self.sent.append(line)
+
+        t.dead = True
+        dying = DyingRefireTransport(t)
+        s.transport = dying
+        removed = s.undo_last_ply()  # must NOT raise (today it propagates)
+        self.assertEqual(removed, "e7e5")
+        faults = [r for r in o["sink"] if r.get("e") == "ENGINE_FAULT"]
+        self.assertEqual(len(faults), 1, o["sink"])
+        self.assertIn("re-fire", faults[0]["reason"])
+        resyncs = [r for r in o["sink"] if r.get("e") == "RESYNC"]
+        self.assertEqual(len(resyncs), 1, o["sink"])
+        self.assertEqual(resyncs[0]["phase"], "applied")
+        self.assertEqual(resyncs[0]["plies"], 1)
+        self.assertEqual(s.state, Session.IDLE, "the _on_fault precedent")
+        self.assertIsNone(dying.outstanding)
 
 
 class TimingAnomalyTests(unittest.TestCase):
