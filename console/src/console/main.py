@@ -423,8 +423,18 @@ def run_game(args) -> int:
     tracer = None
     try:
         transport.handshake(timeout=10.0)
+        # Operator-visible callbacks: REJECT/FAULT echoes + `>> ANNOUNCE:`
+        # render through the same stdout the loop writes (UAT finding: the
+        # session held silent lambdas — rejects and announces never printed).
+        def _display(line):
+            print(line, flush=True)
+
+        def _announce(text):
+            print(f">> ANNOUNCE: {text}", flush=True)
+
         session = Session(transport, BoardState(), sink=sink,
-                          our_color=args.our_color)
+                          our_color=args.our_color,
+                          display_cb=_display, announce_cb=_announce)
         session.game_id = game_id
         session.clock_passthrough_ms = (w_ms, b_ms)
         if syzygy_path is not None:
