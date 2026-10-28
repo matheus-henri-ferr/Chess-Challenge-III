@@ -78,6 +78,11 @@ def parse_args():
                    help="tracer mode: end the game after N half-moves (or a"
                         " terminal bestmove) — GAME_END, log write, in-process"
                         " lint, exit 0")
+    p.add_argument("--syzygy-path", default=None, metavar="DIR",
+                   help="absolute path to the Syzygy 3-4-5 tablebase"
+                        " directory; validated (existing absolute directory)"
+                        " or loud SystemExit before the game (CR-12: a"
+                        " placeholder SyzygyPath is never sent)")
     return p.parse_args()
 
 
@@ -88,6 +93,22 @@ def validate_game_id(game_id):
     if not game_id or not all(c.isalnum() or c == "-" for c in game_id):
         raise SystemExit(f"bad --game-id {game_id!r}: use alnum + dash only")
     return game_id
+
+
+def validate_syzygy_path(value):
+    """CR-12 (main half): --syzygy-path is validated BEFORE the game —
+    existing, absolute directory, or loud SystemExit with a named reason.
+    Returns the resolved absolute path str, or None when the flag is
+    absent (no SyzygyPath option is ever sent in that case)."""
+    if value is None:
+        return None
+    path = pathlib.Path(value).expanduser().resolve()
+    if not path.is_absolute():
+        raise SystemExit(f"bad --syzygy-path {value!r}: not an absolute path")
+    if not path.is_dir():
+        raise SystemExit(f"bad --syzygy-path {value!r}: no such directory "
+                         f"({path})")
+    return str(path)
 
 
 def open_journal(log_dir, game_id):
@@ -130,6 +151,43 @@ def engine_sha256(engine_path):
         return digest.hexdigest()
     except OSError:
         return "unavailable"  # script engines (mocks) have no binary sha
+
+
+# nn-1a298aa575a0.nnue — PROVENANCE §1 (official SF19 net, CC0,
+# unmodified). Full sha256, published in PROVENANCE and verifiable from
+# the source URL; the fallback covers a worktree without the vendored
+# net file (CR-04.4: the header always carries the FULL digest).
+NET_FILE = "src/nn-1a298aa575a0.nnue"
+NET_SHA256_PUBLISHED = \
+    "1a298aa575a085434d29027978dc36867fe9c5bcea9376654b7a8eba1e52dfc2"
+
+
+def net_sha256(net_path=None):
+    """§5.1 header field: the NNUE net's FULL sha256, hashed from the
+    vendored file at game start like engine_sha256 hashes the binary
+    (CR-04.4: the 12-char filename prefix + prose form is gone). On
+    OSError the PROVENANCE-published full hash is the documented
+    constant fallback."""
+    path = pathlib.Path(REPO_ROOT / (net_path or NET_FILE))
+    try:
+        digest = hashlib.sha256()
+        with open(path, "rb") as fh:
+            for chunk in iter(lambda: fh.read(1 << 20), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+    except OSError:
+        return NET_SHA256_PUBLISHED
+
+
+def format_time_control(w_ms, b_ms):
+    """§5.1 `# time-control` from the run's ACTUAL clock numbers (CR-04.1:
+    never a hardcoded 15+10). `M+S` from the passthrough ms — minutes =
+    ms // 60000, seconds = the ms remainder // 1000. The passthrough sends
+    the same budget to both sides, so w is the source (a w≠b spec is a
+    Phase 3 ClockModel concern)."""
+    minutes = w_ms // 60000
+    seconds = (w_ms % 60000) // 1000
+    return f"{minutes}+{seconds}"
 
 
 def parse_clock_ms(specs):
@@ -352,6 +410,7 @@ def run_game(args) -> int:
     journal, linted in-process, and the run exits 0 on `OK fullgame`.
     """
     game_id = validate_game_id(args.game_id)
+    syzygy_path = validate_syzygy_path(args.syzygy_path)
     journal = open_journal(args.log_dir, game_id) if args.log_dir else None
     sink = journal.append if journal is not None else (lambda event: None)
     w_ms, b_ms = parse_clock_ms(args.clock_ms)
@@ -368,6 +427,10 @@ def run_game(args) -> int:
                           our_color=args.our_color)
         session.game_id = game_id
         session.clock_passthrough_ms = (w_ms, b_ms)
+        if syzygy_path is not None:
+            # CR-12: the only path back into the option set — a validated
+            # absolute directory. Never a placeholder.
+            session.options.append(("SyzygyPath", syzygy_path))
         session.apply_startup_options()  # §2.3 set, flushed once at IDLE
         session.start_game(game_id=game_id)  # B1: search #1 fires iff we move first
         loop = OperatorLoop(session, transport)
@@ -381,7 +444,8 @@ def run_game(args) -> int:
                                 log_dir=args.log_dir,
                                 game_id=game_id,
                                 engine_path=args.engine,
-                                clock_ms=(w_ms, b_ms))
+                                clock_ms=(w_ms, b_ms),
+                                syzygy_path=syzygy_path)
             tracer.start()
         try:
             rc = loop.run(tracer=tracer)
@@ -424,7 +488,8 @@ class GameTracer:
 
     def __init__(self, session, loop, transport, *, journal, our_color,
                  auto_opp, max_plies, log_dir=None, game_id=None,
-                 engine_path="./src/stockfish", clock_ms=(900000, 900000)):
+                 engine_path="./src/stockfish", clock_ms=(900000, 900000),
+                 syzygy_path=None):
         import threading
         self.session = session
         self.loop = loop
@@ -437,6 +502,7 @@ class GameTracer:
         self.game_id = game_id
         self.engine_path = engine_path
         self.clock_ms = clock_ms
+        self.syzygy_path = syzygy_path
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self.finished = False
@@ -552,7 +618,6 @@ class GameTracer:
 
     def _write_log(self, records, reason, result):
         import datetime
-        import hashlib
         import pathlib
         from console.log.lint import lint_log
         from console.log.movelog import MoveLog, render
@@ -562,36 +627,40 @@ class GameTracer:
         log_dir.mkdir(parents=True, exist_ok=True)
         name = f"game-{self.game_id}.log" if self.game_id else "game.log"
         log_path = log_dir / name
-        from console.main import engine_sha256
-        lines = []
-        lines.append(f"# game-id {self.game_id or 'game'}")
-        lines.append(f"# date {datetime.date.today().isoformat()}")
-        lines.append(f"# our-color {self.our_color}")
-        lines.append("# time-control 15+10")
-        lines.append(f"# engine-sha256 {engine_sha256(self.engine_path)}")
-        # nn-1a298aa575a0.nnue — PROVENANCE §1 (official SF19 net, CC0,
-        # unmodified). The file name IS the SHA-256 prefix convention.
-        lines.append("# net-sha256 1a298aa575a0 (nn-1a298aa575a0.nnue,"
-                     " official SF19 net, unmodified)")
-        lines.append("# setoption Threads=1 Hash=2048 SyzygyPath=<empty> "
-                     "SyzygyProbeLimit=5 Move_Overhead=100 Ponder=false")
-        lines.append("# SyzygyProbeLimit 5")
-        lines.append("# tb-inventory-hash none")
-        lines.append("# book-hash none book-max-ply 0")
-        lines.append("# network=off")
-        # Move rows: fold from the journal (the projection discipline).
-        for rec in MoveLog.build(records):
-            lines.append(render(rec))
-        lines.append(f"# result {result} reason {reason}")
         w_ms, b_ms = self.clock_ms
-        lines.append(f"# final-clocks w={w_ms} b={b_ms}")
-        body = "\n".join(lines) + "\n"
+        # CR-04.5: the header's option set reflects the ACTUAL effective
+        # set the session flushed (a validated --syzygy-path rides here;
+        # absent → the header shows the set without it, never a placeholder).
+        option_parts = [f"{name}={value}"
+                        for name, value in self.session.options]
         with open(log_path, "w", encoding="utf-8") as fh:
-            fh.write(body)
-        # Trailer's log-sha256 covers the file bytes written so far.
-        sha = hashlib.sha256(body.encode("utf-8")).hexdigest()
-        with open(log_path, "a", encoding="utf-8") as fh:
-            fh.write(f"# log-sha256 {sha}\n")
+            # §5.1 header via MoveLog's writer (CR-04.3: no hand-rolled
+            # header) — real time-control (CR-04.1) and full net sha256
+            # (CR-04.4).
+            MoveLog.write_header(
+                fh,
+                game_id=self.game_id or "game",
+                date=datetime.date.today().isoformat(),
+                our_color=self.our_color,
+                time_control=format_time_control(w_ms, b_ms),
+                engine_sha256=engine_sha256(self.engine_path),
+                net_sha256=net_sha256(),
+                options=option_parts,
+                syzygy_probe_limit=5,
+                tb_inventory_hash="none",
+                book_hash="none",
+                book_max_ply=0)
+            # Move rows: fold from the journal (the projection discipline).
+            for rec in MoveLog.build(records):
+                fh.write(render(rec) + "\n")
+            # §5.2 trailer via MoveLog's writer. The clock numbers are the
+            # initial passthrough values — CR-04.2 labels them honestly
+            # (observed clocks land in Phase 3, CLOCK-08/LOG-05).
+            MoveLog.write_trailer(
+                fh, result=result, reason=reason,
+                final_clock_ms=(w_ms, b_ms), log_path=log_path,
+                note="initial clock passthrough values, not observed "
+                     "remaining (observed clocks land in Phase 3, CLOCK-08)")
         # In-process lint — fail-closed: a failing log raises.
         failures = lint_log(log_path)
         if failures:

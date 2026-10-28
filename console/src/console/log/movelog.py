@@ -143,11 +143,20 @@ class MoveLog:
         fh.write("# network=off\n")
 
     @staticmethod
-    def write_trailer(fh, *, result, reason, final_clock_ms, log_path=None):
-        """§5.2 trailer lines; log-sha256 over the file bytes written so far."""
+    def write_trailer(fh, *, result, reason, final_clock_ms, log_path=None,
+                      note=None):
+        """§5.2 trailer lines; log-sha256 over the file bytes written so far.
+
+        `note` (CR-04.2): an optional honest-labelling line written right
+        after `# final-clocks` — Phase 2's clock numbers are initial
+        passthrough values, and the trailer must not present them as
+        observed remaining time (observed clocks land in Phase 3, CLOCK-08).
+        """
         fh.write(f"# result {result} reason {reason}\n")
         w_ms, b_ms = final_clock_ms
         fh.write(f"# final-clocks w={w_ms} b={b_ms}\n")
+        if note is not None:
+            fh.write(f"# final-clocks-note {note}\n")
         if log_path is not None:
             digest = hashlib.sha256()
             with open(log_path, "rb") as rf:

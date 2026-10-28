@@ -59,8 +59,10 @@ HEADER_LINES = [
     "# our-color w",
     "# time-control 15+10",
     "# engine-sha256 " + "a" * 64,
+    # CR-04.4: the header carries the FULL 64-hex net digest (never the
+    # 12-char filename prefix).
     "# net-sha256 " + "b" * 64,
-    "# setoption Threads=1 Hash=2048 SyzygyPath=<empty> "
+    "# setoption Threads=1 Hash=2048 "
     "SyzygyProbeLimit=5 Move_Overhead=100 Ponder=false",
     "# SyzygyProbeLimit 5",
     "# tb-inventory-hash none",
