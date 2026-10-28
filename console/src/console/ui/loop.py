@@ -230,8 +230,7 @@ class OperatorLoop:
                 if self.stdin_fd not in ready:
                     if tracer is not None and tracer.finished:
                         break
-                    self.prompt()
-                    continue
+                    continue  # prompt already showing — do not re-print per idle tick
                 line = self._read_line()
             else:
                 line = self.stdin.readline()
