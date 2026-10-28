@@ -29,10 +29,12 @@ guessing silently), `r <N>` / `resync <N>` + `y` confirmation,
 (clean shutdown: stop-if-searching, then transport.close).
 """
 
+import queue
 import re
 import select
 import sys
 import time
+import traceback
 
 from console.game.moves import Reject, RejectKind, announce_form
 
@@ -95,13 +97,27 @@ class OperatorLoop:
 
     # --- event drain (T-02-09: the queue never blocks the prompt) ------------
     def drain_events(self):
-        """Feed every queued engine event to the session, then render."""
+        """Feed every queued engine event to the session, then render.
+
+        CR-10: a handler crash is journalled and drained, never fatal —
+        the prompt survives, the remaining queued events still dispatch."""
         while True:
             try:
                 event = self.transport.events.get_nowait()
-            except Exception:
+            except queue.Empty:
                 return
-            self.session.on_engine_event(event)
+            try:
+                self.session.on_engine_event(event)
+            except Exception as exc:  # CR-10: journal + keep draining
+                sink = getattr(self.session, "sink", None)
+                if callable(sink):
+                    sink({"e": "ENGINE_FAULT", "reason":
+                          f"event dispatch error: {exc!r}",
+                          "traceback": traceback.format_exc()})
+                display_cb = getattr(self.session, "display_cb", None)
+                if callable(display_cb):
+                    display_cb(f"ENGINE_FAULT: event dispatch error "
+                               f"{exc!r} — drained, continuing")
 
     # --- input handling --------------------------------------------------------
     def handle_line(self, raw):

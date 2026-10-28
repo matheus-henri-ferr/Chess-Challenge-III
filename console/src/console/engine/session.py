@@ -79,9 +79,11 @@ class Session:
         self.state = self.IDLE
         self.discarding = False         # mirrors transport.discarding
         # §2.3 competition option set — queued, flushed once at IDLE after
-        # the handshake (Pitfall 9: never mid-search).
+        # the handshake (Pitfall 9: never mid-search). CR-12: no placeholder
+        # paths — SyzygyPath is set by the operator config (Phase 3), not
+        # by a '<empty>' sentinel that would leak into the wire.
         self.options = [
-            ("Threads", 1), ("Hash", 2048), ("SyzygyPath", "<empty>"),
+            ("Threads", 1), ("Hash", 2048),
             ("SyzygyProbeLimit", 5), ("Move Overhead", 100), ("Ponder", False),
         ]
         self.clock_passthrough_ms = (600000, 600000)  # A2: verbatim numbers
@@ -288,12 +290,14 @@ class Session:
             # Floor 1: a completed search spans at least one pipe+thread
             # round trip — below the log's 1 ms quantum. The floor keeps
             # the §2.2 invariant writable for instant searches; a peer
-            # claiming MORE than wall (impossible timing, T-02-13) still
-            # fires the assert below.
+            # claiming MORE than wall (impossible timing, T-02-13) is a
+            # fault, not a crash (CR-06): journal + clamp below.
             wall_ms = max(1, self._wall_ms_now() - self.search_t0_ms)
-        assert wall_ms >= engine_ms, (
-            f"wall_ms {wall_ms} < engine_ms {engine_ms} "
-            f"(timing anchor bug, Pitfall 7)")
+        if wall_ms < engine_ms:  # CR-06: fail-journal, never fail-silent/crash
+            self._emit({"e": "ENGINE_FAULT", "reason":
+                        f"wall_ms {wall_ms} < engine_ms {engine_ms} "
+                        f"(anomalous peer timing; row clamped — REVIEW CR-06)"})
+            wall_ms = engine_ms
         self._emit({"e": "MOVE_LOGGED", "src": "search", **meta,
                     "depth": self.last_info.get("depth", 0),
                     "nodes": self.last_info.get("nodes", 0),
