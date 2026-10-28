@@ -1,0 +1,9 @@
+>>> e7e5
+>>> u
+>>> d7d5
+>>> q
+move> move> move> move> move> move> move> move> move> move> move> move> move> move> move> move> move> undone: e2e4  FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+move> move> move> move> move> move> move> move> move> move> move> move> move> move> move> move> D7-D5  FEN: rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2
+move> move> move> move> move> move> move> move> move> move> move> move> 
+
+RC: 0

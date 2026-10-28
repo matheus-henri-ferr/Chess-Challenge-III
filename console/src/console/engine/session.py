@@ -42,6 +42,7 @@ NotImplementedError until Phase 5. Clock numbers ride through verbatim
 (research A2 placeholder); Phase 3's ClockModel replaces the setter.
 """
 
+import queue
 import time
 
 from console.game.moves import Reject, announce_form, operator_move
@@ -78,9 +79,11 @@ class Session:
         self.state = self.IDLE
         self.discarding = False         # mirrors transport.discarding
         # §2.3 competition option set — queued, flushed once at IDLE after
-        # the handshake (Pitfall 9: never mid-search).
+        # the handshake (Pitfall 9: never mid-search). CR-12: no placeholder
+        # paths — SyzygyPath is set by the operator config (Phase 3), not
+        # by a '<empty>' sentinel that would leak into the wire.
         self.options = [
-            ("Threads", 1), ("Hash", 2048), ("SyzygyPath", "<empty>"),
+            ("Threads", 1), ("Hash", 2048),
             ("SyzygyProbeLimit", 5), ("Move Overhead", 100), ("Ponder", False),
         ]
         self.clock_passthrough_ms = (600000, 600000)  # A2: verbatim numbers
@@ -287,12 +290,14 @@ class Session:
             # Floor 1: a completed search spans at least one pipe+thread
             # round trip — below the log's 1 ms quantum. The floor keeps
             # the §2.2 invariant writable for instant searches; a peer
-            # claiming MORE than wall (impossible timing, T-02-13) still
-            # fires the assert below.
+            # claiming MORE than wall (impossible timing, T-02-13) is a
+            # fault, not a crash (CR-06): journal + clamp below.
             wall_ms = max(1, self._wall_ms_now() - self.search_t0_ms)
-        assert wall_ms >= engine_ms, (
-            f"wall_ms {wall_ms} < engine_ms {engine_ms} "
-            f"(timing anchor bug, Pitfall 7)")
+        if wall_ms < engine_ms:  # CR-06: fail-journal, never fail-silent/crash
+            self._emit({"e": "ENGINE_FAULT", "reason":
+                        f"wall_ms {wall_ms} < engine_ms {engine_ms} "
+                        f"(anomalous peer timing; row clamped — REVIEW CR-06)"})
+            wall_ms = engine_ms
         self._emit({"e": "MOVE_LOGGED", "src": "search", **meta,
                     "depth": self.last_info.get("depth", 0),
                     "nodes": self.last_info.get("nodes", 0),
@@ -348,6 +353,58 @@ class Session:
                     "fen": fresh.fen()})
         self.display_cb(f"resynced to {fresh.fen()}")
         return True
+
+    # --- undo (Rule 10 realignment: the session owns the rewind) ---------------
+    def undo_last_ply(self):
+        """Pop the last ply and repair every subsystem the move touched.
+
+        The board is the source of truth (PROTOCOL §1.6): `u` realigns the
+        replica without a restart. This is the session-owned undo (CR-01):
+        the loop never touches board.pop() directly, because a rewind
+        without FSM + transport + journal repair leaves the interrupted
+        search's go outstanding — the next corrected opp-move re-entry
+        would raise from start_search (§1.3) and kill the console
+        (reproduced by the phase-2 verifier).
+
+        Repair order (§1.5: stop first, then discard, then consume):
+          1. board.pop() — nothing to realign → None, no transport side
+             effects, no journal record;
+          2. if a go is outstanding: send stop, mark_discarding, consume
+             the owed bestmove (T-02-20) — a no-answer timeout is an
+             ENGINE_FAULT record, never a crash (the prompt survives);
+          3. reset announce + armed-resync state, re-derive the FSM state
+             from the replica's expected mover;
+          4. emit RESYNC (phase=applied, plies=1) — replay() pops exactly
+             one ply for this shape, so Journal.replay() reproduces the
+             realigned move list (T-02-11 stays aligned).
+        """
+        removed = self.board.pop()
+        if removed is None:
+            return None
+        if self.transport.outstanding is not None:
+            self.transport.send("stop")            # §1.5: stop first…
+            self.transport.mark_discarding()       # …owed bestmove is stale
+            self.discarding = True
+            try:
+                self._consume_owed_bestmove()
+            except queue.Empty:
+                # The engine never answered the stop: journal the anomaly
+                # and keep going — the operator prompt must survive.
+                reason = ("no bestmove to the stop within the wait budget "
+                          "(undo repair)")
+                self._emit({"e": "ENGINE_FAULT", "reason": reason})
+                self.display_cb(f"ENGINE FAULT: {reason}")
+            finally:
+                self.discarding = False
+        self.last_announced = None
+        self.pending_resync = None
+        if self.board.expected_mover() == self.our_color:
+            self._start_search()  # our move was undone: the engine re-thinks
+        else:
+            self.state = self.AWAIT_OPP_CONFIRM  # operator re-types the move
+        self._emit({"e": "RESYNC", "phase": "applied", "plies": 1,
+                    "via": "undo", "fen": self.board.fen()})
+        return removed
 
     # --- ponder (Phase 5 machinery, built + table-visible now) -----------------
     def enter_pondering(self, spec_move):

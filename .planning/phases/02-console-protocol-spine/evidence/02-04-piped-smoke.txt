@@ -1,0 +1,9 @@
+move> move> move> move> move> move> move> move> move> move> move> E7-E5  FEN: rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2
+move> move> move> move> move> move> move> move> move> move> move> move> move> move> move> move> move> move> move> move> undone: g1f3  FEN: rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2
+move> move> move> move> move> move> move> move> move> move> D7-D5  FEN: rnbqkbnr/ppp2ppp/8/3pp3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3
+move> move> move> move> move> move> move> move> move> move>
+rc: 0
+undone-echoed: True
+accepted-echoes: 3
+move> move> nothing to undo
+move> move> 

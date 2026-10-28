@@ -38,7 +38,8 @@ sys.path.insert(0, str(REPO / "vendor"))
 sys.path.insert(0, str(REPO / "console" / "src"))
 
 from console.game.board import BoardState  # noqa: E402
-from console.game.journal import EVENTS, Journal, append_event  # noqa: E402
+from console.game.journal import (  # noqa: E402
+    EVENTS, Journal, JournalCorruptionError, append_event)
 
 
 class AppendOrderTests(unittest.TestCase):
@@ -234,6 +235,62 @@ class AppendOnlyTests(unittest.TestCase):
         for line in src.splitlines():
             if ".open(" in line and "os.open" not in line:
                 self.assertIn('"r"', line)
+
+
+class CorruptionDurabilityTests(unittest.TestCase):
+    """Plan 02-04 Task 3 (CR-11): short-write recovery + named corruption."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="journal-t5-")
+        self.path = os.path.join(self.tmp, "journal.jsonl")
+        self.journal = Journal(self.path)
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_short_write_recovery_loop(self):
+        """os.write delivering half the buffer must not commit a torn
+        line: the completion loop writes the remainder before fsync."""
+        import console.game.journal as journal_mod
+        real_write = os.write
+        calls = []
+
+        def halving_write(fd, data):
+            calls.append(len(data))
+            if len(calls) == 1:  # first call: short write (half the bytes)
+                return real_write(fd, data[:len(data) // 2])
+            return real_write(fd, data)
+
+        journal_mod.os.write = halving_write
+        try:
+            self.journal.append({"e": "OPP_CLOCK", "seq": 1,
+                                 "parsed_ms": 462000})
+        finally:
+            journal_mod.os.write = real_write
+        self.assertGreaterEqual(len(calls), 2,
+                                "os.write called once — loop not exercised")
+        (record,) = self.journal.iter_records()
+        self.assertEqual(record["e"], "OPP_CLOCK")
+        self.assertEqual(record["seq"], 1)
+
+    def test_torn_line_raises_corruption_error_with_path_and_lineno(self):
+        self.journal.append({"e": "REJECT", "seq": 0})
+        with open(self.path, "a", encoding="utf-8") as fh:
+            fh.write('{"e": "TORN", "seq": 1,\n')  # garbage: not JSON
+        with self.assertRaises(JournalCorruptionError) as ctx:
+            self.journal.iter_records()
+        msg = str(ctx.exception)
+        self.assertIn(self.path, msg)
+        self.assertIn("2", msg)  # the torn line is line 2 (1-based)
+
+    def test_replay_propagates_corruption_error_not_jsondecode(self):
+        self.journal.append({"e": "MOVE_LOGGED", "src": "search",
+                             "uci": "e2e4"})
+        with open(self.path, "a", encoding="utf-8") as fh:
+            fh.write("not-json-at-all\n")
+        with self.assertRaises(JournalCorruptionError):
+            self.journal.replay()
 
 
 if __name__ == "__main__":

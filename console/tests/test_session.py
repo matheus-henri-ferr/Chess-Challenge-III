@@ -22,6 +22,7 @@ import sys
 import tempfile
 import time
 import unittest
+import io
 
 REPO = pathlib.Path(__file__).parent.resolve().parent.parent
 MOCK = REPO / "tools" / "mock_engine.py"
@@ -501,6 +502,26 @@ class LoopTests(unittest.TestCase):
         self.assertIn("undone: e2e4", out)
         self.assertEqual(s.board.moves, [])
 
+    def test_piped_multiline_stdin_reaches_handle_line(self):
+        # Regression (02-04 piped smoke): a typed-ahead script arrives in
+        # ONE os.read; lines past the first must be buffered and consumed
+        # line-by-line, never discarded — the smoke feeds 'e7e5\nu\n…\nq'
+        # and every line must reach handle_line.
+        import io
+        s, t, o = make_session(our="w")
+        loop = OperatorLoop(s, t, stdin=io.StringIO(),
+                            stdout=io.StringIO())
+        loop._stdin_buf = b"e7e5\nu\nq\n"
+        loop.stdin_fd = None  # no real fd: buffered lines only, then EOF
+        first = loop._read_line()
+        second = loop._read_line()
+        third = loop._read_line()
+        fourth = loop._read_line()
+        self.assertEqual((first, second, third, fourth),
+                         ("e7e5", "u", "q", None),
+                         "buffered lines must be consumed in order, "
+                         "then EOF")
+
     def test_parse_clock_token_forms(self):
         from console.ui.loop import parse_clock_token
         self.assertEqual(parse_clock_token("7:42"), 462000)
@@ -509,6 +530,209 @@ class LoopTests(unittest.TestCase):
         self.assertEqual(parse_clock_token("90"), 90000)
         self.assertIsNone(parse_clock_token("abc"))
         self.assertIsNone(parse_clock_token("7:"))
+
+
+class UndoRealignmentTests(unittest.TestCase):
+    """CR-01 closure: `u` through the session, with §1.3 transport repair.
+
+    (a) undo during OUR_SEARCH — the reproduced crash sequence: opp move
+    accepted → go outstanding → undo → corrected opp move must end in
+    OUR_SEARCH with zero exceptions (T-02-20).
+    (b) undo with no go outstanding re-fires the search (our move undone).
+    (c) undo with nothing on the board returns None.
+    (d) loop routing: `u` calls session.undo_last_ply exactly once.
+    """
+
+    def test_a_undo_during_our_search_repair_and_reentry(self):
+        board = BoardState()
+        board.try_push_token("e2e4")  # our w move already on the replica
+        s, t, o = make_session(our="w", board=board)
+        s.on_operator_move("e7e5")  # opp move → OUR_SEARCH, go outstanding
+        self.assertEqual(s.state, Session.OUR_SEARCH)
+        self.assertIsNotNone(t.outstanding)
+        # The real transport's reader thread delivers exactly this after a
+        # `stop`: the interrupted search's owed bestmove.
+        t.events.put({"type": "bestmove", "move": "g1f3", "ponder": None,
+                      "search_id": t.search_id})
+        removed = s.undo_last_ply()
+        self.assertEqual(removed, "e7e5")
+        self.assertIn("stop", t.sent, "§1.5: stop first")
+        self.assertTrue(t.discarding, "owed bestmove marked stale")
+        self.assertFalse(s.discarding, "session flag cleared after repair")
+        # The owed answer was consumed and sunk as stale — no board advance.
+        stale = [r for r in o["sink"] if r.get("e") == "STALE_BESTMOVE"]
+        self.assertEqual(len(stale), 1, o["sink"])
+        self.assertEqual(s.board.moves, ["e2e4"])
+        # RESYNC record: replay() pops exactly 1 ply for this shape.
+        resyncs = [r for r in o["sink"] if r.get("e") == "RESYNC"]
+        self.assertEqual(len(resyncs), 1, o["sink"])
+        self.assertEqual(resyncs[0]["phase"], "applied")
+        self.assertEqual(resyncs[0]["plies"], 1)
+        self.assertEqual(resyncs[0]["via"], "undo")
+        self.assertIn("fen", resyncs[0])
+        self.assertIsNone(s.last_announced)
+        self.assertIsNone(s.pending_resync)
+        # expected_mover is now the opponent → AWAIT_OPP_CONFIRM.
+        self.assertEqual(s.state, Session.AWAIT_OPP_CONFIRM)
+        # The CR-01 repro: corrected opp move re-enters without raising.
+        t.outstanding = None  # transport reader-side effect of the stop
+        move = s.on_operator_move("e7e6")
+        self.assertIsNotNone(move)
+        self.assertEqual(s.state, Session.OUR_SEARCH)
+        self.assertEqual(s.board.moves, ["e2e4", "e7e6"])
+
+    def test_a_undo_no_answer_to_stop_prompt_survives(self):
+        # The engine never answers the stop within the budget: the undo
+        # must still complete (queue.Empty path) — prompt survives.
+        board = BoardState()
+        board.try_push_token("e2e4")
+        s, t, o = make_session(our="w", board=board)
+        s.on_operator_move("e7e5")
+        s.wait_for_bestmove_timeout = 0.05  # shrink the budget for the test
+        removed = s.undo_last_ply()
+        self.assertEqual(removed, "e7e5")
+        self.assertIn("stop", t.sent)
+        faults = [r for r in o["sink"] if r.get("e") == "ENGINE_FAULT"]
+        self.assertEqual(len(faults), 1, o["sink"])
+        self.assertIn("no bestmove to the stop", faults[0]["reason"])
+        self.assertEqual(s.state, Session.AWAIT_OPP_CONFIRM)
+
+    def test_b_undo_without_outstanding_go_refires_search(self):
+        board = BoardState()
+        board.try_push_token("e2e4")
+        board.try_push_token("e7e5")
+        s, t, o = make_session(our="w", board=board)
+        s.state = Session.OUR_SEARCH
+        t.events.put({"type": "bestmove", "move": "g1f3", "ponder": None,
+                      "search_id": t.search_id})
+        pump(s, t, until=lambda fed: "bestmove" in fed)
+        self.assertEqual(s.state, Session.ANNOUNCE_PENDING)
+        self.assertIsNone(t.outstanding)
+        removed = s.undo_last_ply()  # pops our g1f3
+        self.assertEqual(removed, "g1f3")
+        self.assertNotIn("stop", t.sent, "no go outstanding: no stop sent")
+        self.assertEqual(s.state, Session.OUR_SEARCH,
+                         "our move undone → the engine re-thinks")
+        self.assertIsNotNone(t.outstanding)
+
+    def test_c_undo_empty_board_returns_none(self):
+        s, t, o = make_session(our="w")
+        self.assertIsNone(s.undo_last_ply())
+        self.assertNotIn("stop", t.sent)
+        self.assertEqual(
+            [r for r in o["sink"] if r.get("e") == "RESYNC"], [])
+
+    def test_d_loop_routes_u_through_session(self):
+        board = BoardState()
+        board.try_push_token("e2e4")
+        calls = []
+
+        class StubSession:
+            def __init__(self):
+                self.board = board
+                self.pending_resync = None
+
+            def undo_last_ply(self):
+                calls.append(1)
+                return board.moves.pop() if board.moves else None
+
+        loop = OperatorLoop(StubSession(), FakeTransport(),
+                            stdin=io.StringIO(), stdout=io.StringIO())
+        loop.handle_line("u")
+        self.assertEqual(len(calls), 1, "undo_last_ply called exactly once")
+        self.assertIn("undone: e2e4", loop.stdout.getvalue())
+        board.try_push_token("e2e4")
+        loop.handle_line("u")
+        loop.handle_line("u")
+        self.assertEqual(len(calls), 3)
+        self.assertIn("nothing to undo", loop.stdout.getvalue())
+
+
+class TimingAnomalyTests(unittest.TestCase):
+    """CR-06: a lying engine_ms (stale info time > wall delta) must clamp +
+    journal an anomaly — never an AssertionError that drain_events swallows,
+    silently dropping the MOVE_LOGGED row."""
+
+    def test_stale_engine_ms_is_clamped_and_journaled(self):
+        board = BoardState()
+        board.try_push_token("e2e4")
+        board.try_push_token("e7e5")
+        s, t, o = make_session(our="w", board=board)
+        s.state = Session.OUR_SEARCH
+        s.last_info = {"depth": 9, "nodes": 50000, "score": "cp 30",
+                       "time": 999999, "pv": "g1f3"}
+        s.search_t0_ms = s._wall_ms_now()  # fresh anchor: wall delta ≈ 0
+        t.events.put({"type": "bestmove", "move": "g1f3", "ponder": None,
+                      "search_id": t.search_id})
+        pump(s, t, until=lambda fed: "bestmove" in fed)
+        rows = [r for r in o["sink"] if r.get("e") == "MOVE_LOGGED"]
+        self.assertEqual(len(rows), 1,
+                         "the row is never silently lost")
+        self.assertGreaterEqual(rows[0]["wall_ms"], rows[0]["engine_ms"])
+        faults = [r for r in o["sink"] if r.get("e") == "ENGINE_FAULT"]
+        self.assertEqual(len(faults), 1, o["sink"])
+        self.assertIn("CR-06", faults[0]["reason"])
+        self.assertEqual(s.state, Session.ANNOUNCE_PENDING,
+                         "FSM advances on every path (the assert skipped it)")
+
+
+class DrainFaultTests(unittest.TestCase):
+    """CR-10: a handler exception journals ENGINE_FAULT with traceback and
+    the drain CONTINUES — never an aborting bare except with zero evidence."""
+
+    def test_handler_exception_journals_fault_and_keeps_draining(self):
+        board = BoardState()
+        s, t, o = make_session(our="w", board=board)
+        calls = []
+
+        def raising_on_first(event):
+            calls.append(event.get("type"))
+            if len(calls) == 1:
+                raise KeyError("boom")
+        s.on_engine_event = raising_on_first
+        loop = OperatorLoop(s, t, stdin=io.StringIO(),
+                            stdout=io.StringIO())
+        loop.session = _DrainSessionDouble(s, o)
+        t.events.put({"type": "info", "depth": 1})
+        t.events.put({"type": "info", "depth": 2})
+        loop.drain_events()  # must not raise
+        self.assertEqual(calls, ["info", "info"],
+                         "the second event must still be dispatched")
+        faults = [r for r in o["sink"] if r.get("e") == "ENGINE_FAULT"]
+        self.assertEqual(len(faults), 1, o["sink"])
+        self.assertIn("traceback", faults[0])
+        self.assertIn("KeyError", faults[0]["traceback"])
+        self.assertIn("event dispatch error", faults[0]["reason"])
+
+    def test_options_carry_no_placeholder_paths(self):
+        # CR-12 session half: the console never sends a path it knows is
+        # bogus — no option value equals "<empty>".
+        s, t, o = make_session(our="w")
+        for name, value in s.options:
+            self.assertNotEqual(value, "<empty>",
+                                f"placeholder path on {name}")
+        self.assertFalse([n for n, v in s.options if n == "SyzygyPath"],
+                         "no SyzygyPath option until 02-05's validated flag")
+
+
+class _DrainSessionDouble:
+    """Wraps a real session: overrides sink/display for fault assertions,
+    keeps on_engine_event dispatch (the drain's real consumer)."""
+
+    def __init__(self, session, o):
+        self._session = session
+        self._o = o
+        self.display_lines = []
+
+    @property
+    def sink(self):
+        return self._o["sink"].append
+
+    def display_cb(self, line):
+        self.display_lines.append(line)
+
+    def on_engine_event(self, event):
+        self._session.on_engine_event(event)
 
 
 if __name__ == "__main__":

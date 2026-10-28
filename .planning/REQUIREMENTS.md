@@ -36,7 +36,7 @@ Requisitos para a entrada na competição. Cada um mapeia para exatamente uma fa
 - [ ] **PROTO-04**: Campo ANNOUNCE é populado exclusivamente por `bestmove`, renderizado em maiúsculas com separador (`E2-E4`, `E7-E8=Q`), visualmente distinto da PV e travado até o `bestmove` chegar (R10)
 - [ ] **PROTO-05**: Máquina de estados explícita `IDLE → OUR_SEARCH → ANNOUNCE_PENDING → AWAIT_OPP_CONFIRM → OPP_TURN/PONDERING`, com tabela de transições e guarda de lado-a-jogar que rejeita dois lances consecutivos do mesmo lado (R10, R13)
 - [ ] **PROTO-06**: Entrada do operador é só teclado, sempre focada, tolerante a colagem, com eco imediato do lance parseado e do FEN resultante, e cue de rejeição audível ou visual (R10)
-- [ ] **PROTO-07**: Resync a partir do tabuleiro: o operador declara divergência, o estado é reconstruído preferindo "reentrar os últimos N lances" a edição livre de FEN, com confirmação e registro `RESYNC` anexado ao journal e ao log — nunca reescrevendo o histórico (R10)
+- [x] **PROTO-07**: Resync a partir do tabuleiro: o operador declara divergência, o estado é reconstruído preferindo "reentrar os últimos N lances" a edição livre de FEN, com confirmação e registro `RESYNC` anexado ao journal e ao log — nunca reescrevendo o histórico (R10)
 - [ ] **PROTO-08**: Relógio do adversário é capturado a cada passagem de turno por um único atalho (`t 7:42`), tolerante a formatos alternativos, armazenado no journal e no log (R7, R12)
 
 ### Relógio e Resiliência
@@ -53,7 +53,7 @@ Requisitos para a entrada na competição. Cada um mapeia para exatamente uma fa
 
 ### Log Obrigatório
 
-- [ ] **LOG-01**: Um arquivo `.log` por partida, append-only, com flush incremental, contendo os oito campos obrigatórios para **cada meio-lance, incluindo os do adversário** (R9)
+- [x] **LOG-01**: Um arquivo `.log` por partida, append-only, com flush incremental, contendo os oito campos obrigatórios para **cada meio-lance, incluindo os do adversário** (R9)
 - [ ] **LOG-02**: Os oito campos são número do lance, cor, lance escolhido em UCI, profundidade, nós, avaliação, PV e tempo gasto; `score` é registrado verbatim incluindo `mate N` e flags de bound (R9)
 - [ ] **LOG-03**: Tempo gasto registra tanto `engine_ms` (do `info` UCI) quanto `wall_ms` (relógio de parede), resolvendo a ambiguidade de "tempo gasto" (R9)
 - [ ] **LOG-04**: Lances de book aparecem com `src=book`, `d=0`, `n=0`, e lances terminais também são logados com campos não-vazios (R9, R3)
@@ -180,7 +180,7 @@ Cada requisito v1 mapeia para exatamente uma fase do `ROADMAP.md`.
 | PROTO-04 | Phase 2 | Pending |
 | PROTO-05 | Phase 2 | Pending |
 | PROTO-06 | Phase 2 | Pending |
-| PROTO-07 | Phase 2 | Pending |
+| PROTO-07 | Phase 2 | Complete |
 | PROTO-08 | Phase 2 | Pending |
 
 ### Relógio e Resiliência
@@ -199,7 +199,7 @@ Cada requisito v1 mapeia para exatamente uma fase do `ROADMAP.md`.
 ### Log Obrigatório
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LOG-01 | Phase 2 | Pending |
+| LOG-01 | Phase 2 | Complete |
 | LOG-02 | Phase 2 | Pending |
 | LOG-03 | Phase 2 | Pending |
 | LOG-04 | Phase 2 | Pending |
