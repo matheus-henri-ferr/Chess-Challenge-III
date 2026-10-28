@@ -42,12 +42,27 @@ EVENTS = ("GAME_START", "MOVE_LOGGED", "REJECT", "STALE_BESTMOVE",
           "OPP_CLOCK", "RESYNC", "ENGINE_FAULT", "FAULT", "GAME_END")
 
 
+class JournalCorruptionError(Exception):
+    """A journal line is torn or garbage — the audit twin is untrustworthy.
+
+    Raised by Journal.iter_records (and therefore by Journal.replay) when
+    a line fails JSON decoding. The message names the journal path and the
+    1-based line number so the operator can triage the artefact; replay of
+    a torn journal fails loudly with this named error, never a bare
+    decoder error mid-game (CR-11)."""
+    pass
+
+
 def append_event(path, event):
     """One fsynced append — the entire durability mechanism.
 
     Stamps t_mono_ms from time.monotonic_ns() (the console-wide timing
-    source), then os.open(O_WRONLY|O_CREAT|O_APPEND, 0o644) → os.write →
-    os.fsync → os.close per record. No rewrite path exists.
+    source), then os.open(O_WRONLY|O_CREAT|O_APPEND, 0o644) → a
+    short-write-safe completion loop (CR-11: os.write may write fewer
+    bytes than requested on ENOSPC/signal — every slice is written until
+    the buffer is exhausted, so a torn line can never be durably
+    committed) → os.fsync (exactly once per record, after the full line)
+    → os.close per record. No rewrite path exists.
     """
     event = dict(event)
     event["t_mono_ms"] = time.monotonic_ns() // 1_000_000
@@ -55,7 +70,9 @@ def append_event(path, event):
     fd = os.open(os.fspath(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND,
                  0o644)
     try:
-        os.write(fd, line.encode("utf-8"))
+        view = memoryview(line.encode("utf-8"))
+        while view:  # CR-11: loop until the whole record is written
+            view = view[os.write(fd, view):]
         os.fsync(fd)
     finally:
         os.close(fd)
@@ -72,13 +89,23 @@ class Journal:
         append_event(self.path, event)
 
     def iter_records(self):
-        """Re-read the file as dicts, in append order."""
+        """Re-read the file as dicts, in append order.
+
+        A torn or garbage line raises JournalCorruptionError naming the
+        journal path and the 1-based line number (CR-11: loud, not
+        fail-silent)."""
         records = []
         with open(self.path, "r", encoding="utf-8") as fh:
-            for line in fh:
+            for lineno, line in enumerate(fh, start=1):
                 line = line.strip()
-                if line:
+                if not line:
+                    continue
+                try:
                     records.append(json.loads(line))
+                except (ValueError, json.JSONDecodeError) as exc:
+                    raise JournalCorruptionError(
+                        f"{self.path}:{lineno}: corrupt journal line "
+                        f"({exc!r})") from exc
         return records
 
     def replay(self):
@@ -90,6 +117,8 @@ class Journal:
         its `plies` last moves — exactly what confirm_resync did live —
         so replay reproduces the live FEN and move list byte-for-byte.
         move_rows are the MOVE_LOGGED records themselves, in order.
+        Replay of a torn journal fails loudly with JournalCorruptionError
+        (via iter_records), never a bare json.JSONDecodeError mid-game.
         """
         from console.game.board import BoardState
         board = BoardState()
