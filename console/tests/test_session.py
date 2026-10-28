@@ -788,6 +788,50 @@ class UndoPromptSurvivalTests(unittest.TestCase):
         self.assertIsNone(dying.outstanding)
 
 
+class LoopUndoSurvivalTests(unittest.TestCase):
+    """H-1 last-resort layer (plan 02-06 Task 2): a residual exception
+    escaping the hardened session's undo still never kills the prompt —
+    the loop journals ENGINE_FAULT with a traceback and keeps accepting
+    input (the CR-10 drain_events discipline, applied to the `u` branch)."""
+
+    def test_loop_u_survives_session_crash_and_stays_functional(self):
+        board = BoardState()
+        board.try_push_token("e2e4")
+        sink = []
+
+        class CrashingUndoSession:
+            """Models an unanticipated residual exception escaping the
+            hardened session — the last-resort layer must still hold."""
+
+            def __init__(self):
+                self.board = board
+                self.pending_resync = None
+                self.sink = sink.append
+
+            def display_cb(self, line):
+                sink.append({"e": "_DISPLAY", "line": line})
+
+            def undo_last_ply(self):
+                raise RuntimeError("boom")
+
+        loop = OperatorLoop(CrashingUndoSession(), FakeTransport(),
+                            stdin=io.StringIO(), stdout=io.StringIO())
+        loop.handle_line("u")  # must NOT raise (today it propagates)
+        faults = [r for r in sink if r.get("e") == "ENGINE_FAULT"]
+        self.assertEqual(len(faults), 1, sink)
+        self.assertIn("undo failed", faults[0]["reason"])
+        self.assertIn("RuntimeError('boom')", faults[0]["reason"])
+        self.assertIn("traceback", faults[0])
+        self.assertIn("RuntimeError", faults[0]["traceback"])
+        self.assertIn("ENGINE FAULT", loop.stdout.getvalue())
+        # The loop object is not wedged: `q` sets the quit flag, and a
+        # subsequent `u` still reaches undo_last_ply.
+        loop.handle_line("q")
+        self.assertTrue(loop._quit)
+        loop.handle_line("u")
+        self.assertEqual(len(faults), 2, sink)
+
+
 class TimingAnomalyTests(unittest.TestCase):
     """CR-06: a lying engine_ms (stale info time > wall delta) must clamp +
     journal an anomaly — never an AssertionError that drain_events swallows,
