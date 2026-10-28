@@ -48,28 +48,25 @@ _RENDER_ORDER = ("src",) + LOG_KEYS[:6] + ("score_white",) + LOG_KEYS[6:]
 def score_white_of(score, side=None):
     """§2.1 White-POV normalisation of a verbatim STM-POV score.
 
-    The numeric part of `cp <int>` / `mate <int>` is normalised to the
-    White-POV sign (a negative STM value becomes positive for White;
-    when the mover was Black, `side="b"` negates a positive value);
-    the bound flag is kept verbatim (research A4: negate the number
-    only, never the flag). `-` (absent) stays `-`.
+    UCI `score` is side-to-move POV, so a white-mover row is ALREADY
+    White-POV — the value is returned as-is for `side="w"` and
+    `side=None` (CR-02: no sign flip for white movers, ever). Negation
+    happens ONLY when the mover was black (`side="b"`). The bound flag
+    is kept verbatim (research A4: negate the number only, never the
+    flag). `-` (absent) stays `-`.
     `side` is the mover colour ("w"/"b"); None means the caller already
     wants the raw normalisation (White-POV as-is, used in tests/fixtures).
     """
     if not score or score == "-":
         return "-"
     tokens = score.split()
-    flip = side == "b"
     out = score
     if len(tokens) >= 2 and tokens[0] in ("cp", "mate") \
             and tokens[1].lstrip("+-").lstrip("-").isdigit():
         value = int(tokens[1])
-        if flip:
-            # STM-POV black → White-POV negation.
-            value = -value
-        elif value < 0:
-            # Negative STM score already IS White-POV-negative; normalise
-            # to the White-POV sign (a minus on a white row).
+        if side == "b":
+            # STM-POV black → White-POV negation. side="w"/None returns
+            # the STM value as-is (already White-POV).
             value = -value
         out = f"{tokens[0]} {value}"
     if len(tokens) >= 3 and tokens[2] in ("lowerbound", "upperbound"):
@@ -146,12 +143,26 @@ class MoveLog:
         fh.write("# network=off\n")
 
     @staticmethod
-    def write_trailer(fh, *, result, reason, final_clock_ms, log_path=None):
-        """§5.2 trailer lines; log-sha256 over the file bytes written so far."""
+    def write_trailer(fh, *, result, reason, final_clock_ms, log_path=None,
+                      note=None):
+        """§5.2 trailer lines; log-sha256 over the file bytes written so far.
+
+        `note` (CR-04.2): an optional honest-labelling line written right
+        after `# final-clocks` — Phase 2's clock numbers are initial
+        passthrough values, and the trailer must not present them as
+        observed remaining time (observed clocks land in Phase 3, CLOCK-08).
+        """
         fh.write(f"# result {result} reason {reason}\n")
         w_ms, b_ms = final_clock_ms
         fh.write(f"# final-clocks w={w_ms} b={b_ms}\n")
+        if note is not None:
+            fh.write(f"# final-clocks-note {note}\n")
         if log_path is not None:
+            # §5.2: the digest covers the bytes written so far — flush the
+            # buffered header+rows BEFORE reading the file back, or the
+            # reader sees a truncated (here: empty) file and logs the
+            # empty-input hash.
+            fh.flush()
             digest = hashlib.sha256()
             with open(log_path, "rb") as rf:
                 for chunk in iter(lambda: rf.read(1 << 20), b""):

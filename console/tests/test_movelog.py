@@ -15,7 +15,13 @@ Covers the plan's acceptance criteria:
   - every §4 variant fill asserted per row (search full fields, opp zeros,
     none terminal with non-empty score, ponder present);
   - bound-flag scores (`cp 35 lowerbound`, `mate 3`) round-trip verbatim
-    while score_white negates ONLY the number, flag kept verbatim (A4);
+    while score_white negates ONLY the number, flag kept verbatim (A4)
+    — negation is side="b"-only (CR-02: white-mover rows are already
+    White-POV, plan 02-05);
+  - CR-02/CR-03 regression classes (plan 02-05): ScoreWhiteSignTests
+    (white-mover negative keeps its sign) + AlternationSeedTests (a
+    valid our-color b white-first log lints clean; alternation still
+    enforced);
   - lint failure fixtures: missing key (names the key), side alternation
     break, wall_ms < engine_ms, src=banana, missing header/trailer — each
     produces a NAMED failure; the golden full-game log passes with zero
@@ -53,8 +59,10 @@ HEADER_LINES = [
     "# our-color w",
     "# time-control 15+10",
     "# engine-sha256 " + "a" * 64,
+    # CR-04.4: the header carries the FULL 64-hex net digest (never the
+    # 12-char filename prefix).
     "# net-sha256 " + "b" * 64,
-    "# setoption Threads=1 Hash=2048 SyzygyPath=<empty> "
+    "# setoption Threads=1 Hash=2048 "
     "SyzygyProbeLimit=5 Move_Overhead=100 Ponder=false",
     "# SyzygyProbeLimit 5",
     "# tb-inventory-hash none",
@@ -188,13 +196,15 @@ class VariantFillTests(unittest.TestCase):
         self.assertTrue(by_src["none"]["score"])
 
     def test_score_white_negates_number_keeps_flag(self):
+        # side=None = caller already wants the raw STM value as-is
+        # (White-POV-as-is); negation is side="b"-only (CR-02).
         self.assertEqual(score_white_of("cp 35"), "cp 35")
-        self.assertEqual(score_white_of("cp -35"), "cp 35")
-        self.assertEqual(score_white_of("mate -3"), "mate 3")
+        self.assertEqual(score_white_of("cp -35"), "cp -35")
+        self.assertEqual(score_white_of("mate -3"), "mate -3")
         self.assertEqual(score_white_of("cp 35 lowerbound"),
                          "cp 35 lowerbound")
         self.assertEqual(score_white_of("cp -12 upperbound"),
-                         "cp 12 upperbound")
+                         "cp -12 upperbound")
         self.assertEqual(score_white_of("-"), "-")
         # STM black with a cp score flips the sign for White's POV.
         rows = MoveLog.build([
@@ -207,6 +217,95 @@ class VariantFillTests(unittest.TestCase):
         rows = MoveLog.build(self._events())
         for rec in rows:
             self.assertGreaterEqual(rec["wall_ms"], rec["engine_ms"])
+
+
+class ScoreWhiteSignTests(unittest.TestCase):
+    """CR-02 regression: score_white is a correct White-POV normalisation
+    (LOGBOOK §2.1). UCI `score` is side-to-move POV, so a white-mover row
+    is ALREADY White-POV — negation happens ONLY when the mover was black.
+    The deleted `elif value < 0` branch flipped every white-mover negative
+    score (the "we are worse" losing-game line) to the wrong sign."""
+
+    def test_white_mover_negative_keeps_sign(self):
+        # The live path CR-02 broke: side="w" negative STM score must stay
+        # negative (White is worse) — pinned verbatim per the plan.
+        self.assertEqual(score_white_of("cp -30", "w"), "cp -30")
+
+    def test_white_mover_positive_unchanged(self):
+        self.assertEqual(score_white_of("cp 30", "w"), "cp 30")
+
+    def test_black_mover_negates_both_signs(self):
+        self.assertEqual(score_white_of("cp -30", "b"), "cp 30")
+        self.assertEqual(score_white_of("cp 30", "b"), "cp -30")
+
+    def test_mate_scores_follow_same_rule(self):
+        self.assertEqual(score_white_of("mate -3", "w"), "mate -3")
+        self.assertEqual(score_white_of("mate 3", "b"), "mate -3")
+
+    def test_bound_flag_rides_verbatim_under_negation(self):
+        self.assertEqual(score_white_of("cp 35 lowerbound", "b"),
+                         "cp -35 lowerbound")
+
+    def test_absent_score_stays_dash(self):
+        self.assertEqual(score_white_of("-", None), "-")
+
+    def test_build_white_negative_row_pins_regression(self):
+        rows = MoveLog.build([
+            {"e": "MOVE_LOGGED", "src": "search", "move_no": 1, "side": "w",
+             "uci": "e2e4", "depth": 8, "nodes": 100, "score": "cp -30",
+             "engine_ms": 5, "wall_ms": 9, "pv": "e2e4"}])
+        self.assertEqual(rows[0]["score_white"], "cp -30")
+
+
+class AlternationSeedTests(unittest.TestCase):
+    """CR-03 regression: side alternation seeds expect_side="w"
+    unconditionally — white always moves first (LOGBOOK §1.4); the
+    header's our-color is the console's colour, never the first mover.
+    A valid black-side log (our-color b, white-first rows) must lint
+    clean; pre-fix code failed it with 'side w breaks w/b alternation'."""
+
+    def lint_text(self, text):
+        fh = tempfile.NamedTemporaryFile("w", suffix=".log", delete=False)
+        fh.write(text)
+        fh.close()
+        self.addCleanup(pathlib.Path(fh.name).unlink)
+        return lint_log(fh.name)
+
+    def black_side_log(self):
+        header = ["# game-id black01",
+                  "# date 2026-10-28",
+                  "# our-color b",
+                  "# time-control 1+0",
+                  "# engine-sha256 " + "a" * 64,
+                  "# net-sha256 " + "b" * 64,
+                  "# setoption Threads=1 Hash=2048 "
+                  "SyzygyProbeLimit=5 Move_Overhead=100 Ponder=false",
+                  "# SyzygyProbeLimit 5",
+                  "# tb-inventory-hash none",
+                  "# book-hash none book-max-ply 0",
+                  "# network=off"]
+        rows = [valid_line(side="w", uci="e2e4"),
+                valid_line(side="b", uci="e7e5", move_no=1,
+                           score="cp -30"),
+                valid_line(side="w", uci="g1f3", move_no=2),
+                valid_line(side="b", uci="b8c6", move_no=2)]
+        trailer = ["# result * reason max-plies 4 reached",
+                   "# final-clocks w=60000 b=60000",
+                   "# log-sha256 " + "c" * 64]
+        return "\n".join(header + rows + trailer) + "\n"
+
+    def test_valid_black_side_log_lints_clean(self):
+        """# our-color b + white-first first row = a VALID log; the
+        fail-closed linter must accept it with zero failures."""
+        self.assertEqual(self.lint_text(self.black_side_log()), [])
+
+    def test_black_side_alternation_still_enforced(self):
+        """Seeding w unconditionally does not weaken the check: a
+        black-first log (impossible game) still fails."""
+        text = self.black_side_log().replace(
+            'side=w uci=e2e4', 'side=b uci=e2e4', 1)
+        failures = self.lint_text(text)
+        self.assertTrue(any("alternation" in f for f in failures), failures)
 
 
 class LintFailureTests(unittest.TestCase):

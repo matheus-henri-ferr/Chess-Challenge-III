@@ -116,6 +116,80 @@ class RealEngineFullGameTests(unittest.TestCase):
         if not golden.exists():
             self.skipTest("golden fixture not yet generated")
         self.assertEqual(lint_log(golden), [])
+        # CR-04.1 pinned in the committed artefact: the header records the
+        # run's actual time-control (the golden regeneration runs
+        # w=60000,b=60000 = 1+0), never the hardcoded 15+10.
+        lines = golden.read_text(encoding="utf-8").splitlines()
+        self.assertIn("# time-control 1+0", lines)
+        self.assertNotIn("# time-control 15+10", lines)
+
+
+class BlackSideFullGameTests(unittest.TestCase):
+    """CR-03 unmask: a real-SF game with --our-color b produces a
+    lint-clean log. Pre-CR-03 this run's in-process lint raised
+    TracerLogError (side w breaks w/b alternation) and the test failed —
+    every valid black-side log was rejected by the fail-closed linter.
+
+    our_color="b" means the console waits for white: the SCRIPTED line is
+    white's moves (the opponent of the console), and the console's own
+    moves come from the engine.
+    """
+
+    def test_full_game_black_side_lint_clean_log(self):
+        # Real-SF black replies deviate from any fixed white line (e.g.
+        # 4...exd4). The scripted WHITE line is a repertoire long enough
+        # for the tracer's diverged-token skip to keep finding legal
+        # continuations to the 12-ply cap (each skipped token just falls
+        # through to the next legal one).
+        rc, out, tmp = run_console(
+            "./src/stockfish", "b", "e2eblk",
+            auto_opp=("e2e4 g1f3 b1c3 d2d4 c2c3 g1f3 f1c4 e1g1 "
+                      "e2e3 f1d3 a2a4 b1a3 c2c4 d2d3 b1c3 f1e2 "
+                      "c2c3 f1c4 e1g1 g2g3"),
+            max_plies=12, timeout=300, clock_ms="w=60000,b=60000")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("OK fullgame", out)
+
+        log_path = pathlib.Path(tmp) / "game-e2eblk.log"
+        self.assertTrue(log_path.exists(), out)
+        lines = log_path.read_text(encoding="utf-8").splitlines()
+        move_rows = [ln for ln in lines if ln.startswith("src=")]
+        self.assertGreaterEqual(len(move_rows), 12)
+        # The previously-masked path: the black-side log lints clean.
+        self.assertEqual(lint_log(log_path), [], lines[:12])
+        # The header honestly records the console's colour.
+        self.assertIn("# our-color b", lines)
+
+
+class TracerHeaderTruthTests(unittest.TestCase):
+    """CR-04 regression: the tracer's written header tells the truth.
+
+    After a mock-engine tracer run the log's `# time-control` line equals
+    the run's actual --clock-ms spec (format `M+S` from the ms values —
+    the e2e runs 60000/60000 = `1+0`, NOT a hardcoded 15+10), and
+    `# net-sha256` is a full 64-hex digest (not the 12-char prefix).
+    """
+
+    def test_mock_tracer_header_time_control_and_net_sha(self):
+        rc, out, tmp = run_console(
+            "tools/mock_engine.py", "w", "e2ehead",
+            auto_opp="e7e5 g8f6", max_plies=2, timeout=60,
+            clock_ms="w=60000,b=60000")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("OK fullgame", out)
+        log_path = pathlib.Path(tmp) / "game-e2ehead.log"
+        self.assertTrue(log_path.exists(), out)
+        lines = log_path.read_text(encoding="utf-8").splitlines()
+        tc = [ln for ln in lines if ln.startswith("# time-control")]
+        self.assertEqual(tc, ["# time-control 1+0"], lines)
+        net = [ln for ln in lines if ln.startswith("# net-sha256")]
+        self.assertEqual(len(net), 1, lines)
+        digest = net[0].removeprefix("# net-sha256 ").split()[0]
+        self.assertEqual(len(digest), 64, net[0])
+        self.assertTrue(all(c in "0123456789abcdef" for c in digest),
+                        net[0])
+        # The 12-char prefix + prose form is gone.
+        self.assertNotIn("1a298aa575a0 (", net[0])
 
 
 class TerminalRowTests(unittest.TestCase):
