@@ -557,7 +557,11 @@ class UndoRealignmentTests(unittest.TestCase):
         removed = s.undo_last_ply()
         self.assertEqual(removed, "e7e5")
         self.assertIn("stop", t.sent, "§1.5: stop first")
-        self.assertTrue(t.discarding, "owed bestmove marked stale")
+        # L-1 fold (02-06): after the repair consumed the owed bestmove,
+        # the discard purpose is fulfilled — both mirrors clear (the real
+        # transport's _dispatch_bestmove clears the flag on the consumed
+        # stale answer; the repair's finally is the belt-and-braces).
+        self.assertFalse(t.discarding, "discard flag clear post-repair")
         self.assertFalse(s.discarding, "session flag cleared after repair")
         # The owed answer was consumed and sunk as stale — no board advance.
         stale = [r for r in o["sink"] if r.get("e") == "STALE_BESTMOVE"]
@@ -727,15 +731,18 @@ class UndoPromptSurvivalTests(unittest.TestCase):
         removed = s.undo_last_ply()  # must NOT raise
         self.assertEqual(removed, "e7e5")
         faults = [r for r in o["sink"] if r.get("e") == "ENGINE_FAULT"]
-        self.assertEqual(len(faults), 1, o["sink"])
-        self.assertIn("EOF", faults[0]["reason"])
-        self.assertIn("owed bestmove", faults[0]["reason"])
+        self.assertEqual(len(faults), 2, o["sink"])  # eof evidence + abort
+        self.assertIn("EOF before the owed", faults[0]["reason"])
+        self.assertIn("consumed event", faults[0]["reason"])
+        self.assertIn("undo repair aborted", faults[1]["reason"])
         self.assertIsNone(t.outstanding)
         resyncs = [r for r in o["sink"] if r.get("e") == "RESYNC"]
         self.assertEqual(len(resyncs), 1, o["sink"])
         self.assertEqual(resyncs[0]["via"], "undo")
         moves = [r for r in o["sink"] if r.get("e") == "MOVE_LOGGED"]
-        self.assertEqual(moves, [], "no phantom board advance after the pop")
+        self.assertEqual([r["uci"] for r in moves], ["e7e5"],
+                         "only the operator's e7e5 row — no phantom advance "
+                         "after the pop (the e7e5 row predates the undo)")
         self.assertFalse(t.discarding)
         self.assertFalse(s.discarding)
         self.assertEqual(s.state, Session.AWAIT_OPP_CONFIRM)
@@ -768,7 +775,8 @@ class UndoPromptSurvivalTests(unittest.TestCase):
         dying = DyingRefireTransport(t)
         s.transport = dying
         removed = s.undo_last_ply()  # must NOT raise (today it propagates)
-        self.assertEqual(removed, "e7e5")
+        self.assertEqual(removed, "g1f3",
+                         "the pushed our-move g1f3 is what the pop removes")
         faults = [r for r in o["sink"] if r.get("e") == "ENGINE_FAULT"]
         self.assertEqual(len(faults), 1, o["sink"])
         self.assertIn("re-fire", faults[0]["reason"])
