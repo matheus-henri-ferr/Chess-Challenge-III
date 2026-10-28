@@ -1,0 +1,73 @@
+test_opp_colour_first_sends_nothing (console.tests.test_session.GameStartTriggerTests.test_opp_colour_first_sends_nothing) ... ok
+test_our_colour_first_fires_search_one (console.tests.test_session.GameStartTriggerTests.test_our_colour_first_fires_search_one) ... ok
+test_illegal_bestmove_fault_never_announced (console.tests.test_session.IllegalBestmoveFaultTests.test_illegal_bestmove_fault_never_announced) ... ok
+test_length_bound_and_empty_input (console.tests.test_session.LoopTests.test_length_bound_and_empty_input) ... ok
+test_parse_clock_token_forms (console.tests.test_session.LoopTests.test_parse_clock_token_forms) ... ok
+test_resync_command_and_confirmation (console.tests.test_session.LoopTests.test_resync_command_and_confirmation) ... ok
+test_scripted_stdin_move_garbage_clock (console.tests.test_session.LoopTests.test_scripted_stdin_move_garbage_clock) ... ok
+test_select_loop_drains_events_while_stdin_idle (console.tests.test_session.LoopTests.test_select_loop_drains_events_while_stdin_idle) ... ok
+test_undo_command (console.tests.test_session.LoopTests.test_undo_command) ... ok
+test_setoption_reachable_from_any_state_queue_only (console.tests.test_session.OptionFlushTests.test_setoption_reachable_from_any_state_queue_only) ... ok
+test_startup_set_queues_and_flushes_at_idle (console.tests.test_session.OptionFlushTests.test_startup_set_queues_and_flushes_at_idle) ... ok
+test_info_pv_never_writes_announce (console.tests.test_session.PvNeverAnnounceTests.test_info_pv_never_writes_announce) ... ok
+test_resync_confirmation_gate_blocks_unconfirmed (console.tests.test_session.ResyncTests.test_resync_confirmation_gate_blocks_unconfirmed) ... ok
+test_resync_rejects_out_of_range (console.tests.test_session.ResyncTests.test_resync_rejects_out_of_range) ... ok
+test_resync_replay_happy_path (console.tests.test_session.ResyncTests.test_resync_replay_happy_path) ... ok
+test_guard_rejects_in_both_directions (console.tests.test_session.SideToMoveGuardTests.test_guard_rejects_in_both_directions) ... ok
+test_two_consecutive_opp_moves_impossible (console.tests.test_session.SideToMoveGuardTests.test_two_consecutive_opp_moves_impossible) ... ok
+test_table_rows (console.tests.test_session.TransitionTableTests.test_table_rows) ... ok
+test_a_undo_during_our_search_repair_and_reentry (console.tests.test_session.UndoRealignmentTests.test_a_undo_during_our_search_repair_and_reentry) ... ERROR
+test_a_undo_no_answer_to_stop_prompt_survives (console.tests.test_session.UndoRealignmentTests.test_a_undo_no_answer_to_stop_prompt_survives) ... ERROR
+test_b_undo_without_outstanding_go_refires_search (console.tests.test_session.UndoRealignmentTests.test_b_undo_without_outstanding_go_refires_search) ... ERROR
+test_c_undo_empty_board_returns_none (console.tests.test_session.UndoRealignmentTests.test_c_undo_empty_board_returns_none) ... ERROR
+test_d_loop_routes_u_through_session (console.tests.test_session.UndoRealignmentTests.test_d_loop_routes_u_through_session) ... FAIL
+
+======================================================================
+ERROR: test_a_undo_during_our_search_repair_and_reentry (console.tests.test_session.UndoRealignmentTests.test_a_undo_during_our_search_repair_and_reentry)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/theusxix/Desktop/ProjectsOwn/ChessChallendIII/.claude/worktrees/agent-p02g-04/console/tests/test_session.py", line 537, in test_a_undo_during_our_search_repair_and_reentry
+    removed = s.undo_last_ply()
+              ^^^^^^^^^^^^^^^
+AttributeError: 'Session' object has no attribute 'undo_last_ply'
+
+======================================================================
+ERROR: test_a_undo_no_answer_to_stop_prompt_survives (console.tests.test_session.UndoRealignmentTests.test_a_undo_no_answer_to_stop_prompt_survives)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/theusxix/Desktop/ProjectsOwn/ChessChallendIII/.claude/worktrees/agent-p02g-04/console/tests/test_session.py", line 574, in test_a_undo_no_answer_to_stop_prompt_survives
+    removed = s.undo_last_ply()
+              ^^^^^^^^^^^^^^^
+AttributeError: 'Session' object has no attribute 'undo_last_ply'
+
+======================================================================
+ERROR: test_b_undo_without_outstanding_go_refires_search (console.tests.test_session.UndoRealignmentTests.test_b_undo_without_outstanding_go_refires_search)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/theusxix/Desktop/ProjectsOwn/ChessChallendIII/.claude/worktrees/agent-p02g-04/console/tests/test_session.py", line 593, in test_b_undo_without_outstanding_go_refires_search
+    removed = s.undo_last_ply()  # pops our g1f3
+              ^^^^^^^^^^^^^^^
+AttributeError: 'Session' object has no attribute 'undo_last_ply'
+
+======================================================================
+ERROR: test_c_undo_empty_board_returns_none (console.tests.test_session.UndoRealignmentTests.test_c_undo_empty_board_returns_none)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/theusxix/Desktop/ProjectsOwn/ChessChallendIII/.claude/worktrees/agent-p02g-04/console/tests/test_session.py", line 602, in test_c_undo_empty_board_returns_none
+    self.assertIsNone(s.undo_last_ply())
+                      ^^^^^^^^^^^^^^^
+AttributeError: 'Session' object has no attribute 'undo_last_ply'
+
+======================================================================
+FAIL: test_d_loop_routes_u_through_session (console.tests.test_session.UndoRealignmentTests.test_d_loop_routes_u_through_session)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/theusxix/Desktop/ProjectsOwn/ChessChallendIII/.claude/worktrees/agent-p02g-04/console/tests/test_session.py", line 624, in test_d_loop_routes_u_through_session
+    self.assertEqual(len(calls), 1, "undo_last_ply called exactly once")
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 != 1 : undo_last_ply called exactly once
+
+----------------------------------------------------------------------
+Ran 23 tests in 1.270s
+
+FAILED (failures=1, errors=4)
