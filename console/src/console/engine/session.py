@@ -370,38 +370,82 @@ class Session:
           1. board.pop() — nothing to realign → None, no transport side
              effects, no journal record;
           2. if a go is outstanding: send stop, mark_discarding, consume
-             the owed bestmove (T-02-20) — a no-answer timeout is an
-             ENGINE_FAULT record, never a crash (the prompt survives);
+             the owed bestmove (T-02-20) — every failure mode is
+             journalled, never a crash (the operator prompt must
+             survive): a dead engine at the stop (RuntimeError/OSError
+             from send), a no-answer timeout (queue.Empty), and an
+             engine death between the stop and the owed bestmove (the
+             eof RuntimeError from _consume_owed_bestmove, whose
+             consumed eof event is journalled as evidence, never
+             dropped). Each failure mode clears transport.outstanding
+             so the corrected re-entry cannot die on §1.3's
+             start_search guard, and clears both discarding mirrors
+             (L-1);
           3. reset announce + armed-resync state, re-derive the FSM state
-             from the replica's expected mover;
-          4. emit RESYNC (phase=applied, plies=1) — replay() pops exactly
-             one ply for this shape, so Journal.replay() reproduces the
-             realigned move list (T-02-11 stays aligned).
+             from the replica's expected mover — the re-fire
+             _start_search is guarded the same way: a dead engine there
+             journals the fault and lands IDLE (the _on_fault precedent);
+          4. emit RESYNC (phase=applied, plies=1) on EVERY post-pop
+             path — replay() pops exactly one ply for this shape, so
+             Journal.replay() reproduces the realigned move list and
+             the journal never diverges from the live board, even when
+             the repair failed (T-02-11 stays aligned).
         """
         removed = self.board.pop()
         if removed is None:
             return None
         if self.transport.outstanding is not None:
-            self.transport.send("stop")            # §1.5: stop first…
-            self.transport.mark_discarding()       # …owed bestmove is stale
-            self.discarding = True
             try:
-                self._consume_owed_bestmove()
-            except queue.Empty:
-                # The engine never answered the stop: journal the anomaly
-                # and keep going — the operator prompt must survive.
-                reason = ("no bestmove to the stop within the wait budget "
-                          "(undo repair)")
+                self.transport.send("stop")            # §1.5: stop first…
+            except (RuntimeError, OSError) as exc:
+                # The engine is already gone: journal the evidence, drop
+                # the dead search's outstanding go, skip the
+                # discard/consume steps (nothing left to discard).
+                reason = f"undo repair: stop send failed ({exc!r})"
                 self._emit({"e": "ENGINE_FAULT", "reason": reason})
                 self.display_cb(f"ENGINE FAULT: {reason}")
-            finally:
-                self.discarding = False
+                self.transport.outstanding = None
+            else:
+                self.transport.mark_discarding()       # …owed bestmove is stale
+                self.discarding = True
+                try:
+                    self._consume_owed_bestmove()
+                except queue.Empty:
+                    # The engine never answered the stop: journal the anomaly
+                    # and keep going — the operator prompt must survive.
+                    reason = ("no bestmove to the stop within the wait budget "
+                              "(undo repair)")
+                    self._emit({"e": "ENGINE_FAULT", "reason": reason})
+                    self.display_cb(f"ENGINE FAULT: {reason}")
+                    self.transport.outstanding = None  # §1.3: clear dead go
+                    self.transport.discarding = False  # L-1: clear both mirrors
+                except (RuntimeError, OSError) as exc:
+                    # Engine death between the stop and the owed bestmove
+                    # (eof RuntimeError from _consume_owed_bestmove):
+                    # journal and keep going — the prompt survives (H-1).
+                    reason = f"undo repair aborted: {exc!r}"
+                    self._emit({"e": "ENGINE_FAULT", "reason": reason})
+                    self.display_cb(f"ENGINE FAULT: {reason}")
+                    self.transport.outstanding = None
+                finally:
+                    self.discarding = False
+                    self.transport.discarding = False  # L-1: not only the mirror
         self.last_announced = None
         self.pending_resync = None
-        if self.board.expected_mover() == self.our_color:
-            self._start_search()  # our move was undone: the engine re-thinks
-        else:
-            self.state = self.AWAIT_OPP_CONFIRM  # operator re-types the move
+        try:
+            if self.board.expected_mover() == self.our_color:
+                self._start_search()  # our move was undone: the engine re-thinks
+            else:
+                self.state = self.AWAIT_OPP_CONFIRM  # operator re-types the move
+        except (RuntimeError, OSError) as exc:
+            # The re-fire hit a dead engine (H-1 death shape 3): land IDLE —
+            # the _on_fault precedent. Restart machinery is §9.2's
+            # documented policy, out of scope here.
+            reason = f"undo repair: engine re-fire failed ({exc!r})"
+            self._emit({"e": "ENGINE_FAULT", "reason": reason})
+            self.display_cb(f"ENGINE FAULT: {reason}")
+            self.transport.outstanding = None
+            self.state = self.IDLE
         self._emit({"e": "RESYNC", "phase": "applied", "plies": 1,
                     "via": "undo", "fen": self.board.fen()})
         return removed
@@ -463,6 +507,14 @@ class Session:
                     self._on_bestmove(event, stale=True)
                     return event
                 if etype == "eof":
+                    # H-1 evidence fix: the consumed eof event is
+                    # journalled as evidence before the raise — a
+                    # dropped event means the journal loses the death
+                    # record exactly when it matters.
+                    self._emit({"e": "ENGINE_FAULT",
+                                "reason": "engine EOF before the owed "
+                                          "bestmove (consumed event "
+                                          "preserved as evidence)"})
                     raise RuntimeError("engine EOF before the owed bestmove")
                 deferred.append(event)
         finally:
