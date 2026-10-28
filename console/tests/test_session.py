@@ -568,8 +568,6 @@ class UndoRealignmentTests(unittest.TestCase):
         board.try_push_token("e2e4")
         s, t, o = make_session(our="w", board=board)
         s.on_operator_move("e7e5")
-        t.events.put({"type": "bestmove", "move": "g1f3", "ponder": None,
-                      "search_id": t.search_id})
         s.wait_for_bestmove_timeout = 0.05  # shrink the budget for the test
         removed = s.undo_last_ply()
         self.assertEqual(removed, "e7e5")

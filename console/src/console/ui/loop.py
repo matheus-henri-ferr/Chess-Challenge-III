@@ -117,7 +117,7 @@ class OperatorLoop:
             self._quit = True
             return
         if line == "u":
-            removed = self.session.board.pop()
+            removed = self.session.undo_last_ply()
             if removed is None:
                 self.say("nothing to undo")
             else:
