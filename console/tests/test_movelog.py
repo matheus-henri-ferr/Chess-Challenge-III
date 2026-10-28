@@ -209,6 +209,95 @@ class VariantFillTests(unittest.TestCase):
             self.assertGreaterEqual(rec["wall_ms"], rec["engine_ms"])
 
 
+class ScoreWhiteSignTests(unittest.TestCase):
+    """CR-02 regression: score_white is a correct White-POV normalisation
+    (LOGBOOK §2.1). UCI `score` is side-to-move POV, so a white-mover row
+    is ALREADY White-POV — negation happens ONLY when the mover was black.
+    The deleted `elif value < 0` branch flipped every white-mover negative
+    score (the "we are worse" losing-game line) to the wrong sign."""
+
+    def test_white_mover_negative_keeps_sign(self):
+        # The live path CR-02 broke: side="w" negative STM score must stay
+        # negative (White is worse) — pinned verbatim per the plan.
+        self.assertEqual(score_white_of("cp -30", "w"), "cp -30")
+
+    def test_white_mover_positive_unchanged(self):
+        self.assertEqual(score_white_of("cp 30", "w"), "cp 30")
+
+    def test_black_mover_negates_both_signs(self):
+        self.assertEqual(score_white_of("cp -30", "b"), "cp 30")
+        self.assertEqual(score_white_of("cp 30", "b"), "cp -30")
+
+    def test_mate_scores_follow_same_rule(self):
+        self.assertEqual(score_white_of("mate -3", "w"), "mate -3")
+        self.assertEqual(score_white_of("mate 3", "b"), "mate -3")
+
+    def test_bound_flag_rides_verbatim_under_negation(self):
+        self.assertEqual(score_white_of("cp 35 lowerbound", "b"),
+                         "cp -35 lowerbound")
+
+    def test_absent_score_stays_dash(self):
+        self.assertEqual(score_white_of("-", None), "-")
+
+    def test_build_white_negative_row_pins_regression(self):
+        rows = MoveLog.build([
+            {"e": "MOVE_LOGGED", "src": "search", "move_no": 1, "side": "w",
+             "uci": "e2e4", "depth": 8, "nodes": 100, "score": "cp -30",
+             "engine_ms": 5, "wall_ms": 9, "pv": "e2e4"}])
+        self.assertEqual(rows[0]["score_white"], "cp -30")
+
+
+class AlternationSeedTests(unittest.TestCase):
+    """CR-03 regression: side alternation seeds expect_side="w"
+    unconditionally — white always moves first (LOGBOOK §1.4); the
+    header's our-color is the console's colour, never the first mover.
+    A valid black-side log (our-color b, white-first rows) must lint
+    clean; pre-fix code failed it with 'side w breaks w/b alternation'."""
+
+    def lint_text(self, text):
+        fh = tempfile.NamedTemporaryFile("w", suffix=".log", delete=False)
+        fh.write(text)
+        fh.close()
+        self.addCleanup(pathlib.Path(fh.name).unlink)
+        return lint_log(fh.name)
+
+    def black_side_log(self):
+        header = ["# game-id black01",
+                  "# date 2026-10-28",
+                  "# our-color b",
+                  "# time-control 1+0",
+                  "# engine-sha256 " + "a" * 64,
+                  "# net-sha256 " + "b" * 64,
+                  "# setoption Threads=1 Hash=2048 "
+                  "SyzygyProbeLimit=5 Move_Overhead=100 Ponder=false",
+                  "# SyzygyProbeLimit 5",
+                  "# tb-inventory-hash none",
+                  "# book-hash none book-max-ply 0",
+                  "# network=off"]
+        rows = [valid_line(side="w", uci="e2e4"),
+                valid_line(side="b", uci="e7e5", move_no=1,
+                           score="cp -30"),
+                valid_line(side="w", uci="g1f3", move_no=2),
+                valid_line(side="b", uci="b8c6", move_no=2)]
+        trailer = ["# result * reason max-plies 4 reached",
+                   "# final-clocks w=60000 b=60000",
+                   "# log-sha256 " + "c" * 64]
+        return "\n".join(header + rows + trailer) + "\n"
+
+    def test_valid_black_side_log_lints_clean(self):
+        """# our-color b + white-first first row = a VALID log; the
+        fail-closed linter must accept it with zero failures."""
+        self.assertEqual(self.lint_text(self.black_side_log()), [])
+
+    def test_black_side_alternation_still_enforced(self):
+        """Seeding w unconditionally does not weaken the check: a
+        black-first log (impossible game) still fails."""
+        text = self.black_side_log().replace(
+            'side=w uci=e2e4', 'side=b uci=e2e4', 1)
+        failures = self.lint_text(text)
+        self.assertTrue(any("alternation" in f for f in failures), failures)
+
+
 class LintFailureTests(unittest.TestCase):
     """Every §6.1 check fails closed with a NAMED failure."""
 
