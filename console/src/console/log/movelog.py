@@ -48,28 +48,25 @@ _RENDER_ORDER = ("src",) + LOG_KEYS[:6] + ("score_white",) + LOG_KEYS[6:]
 def score_white_of(score, side=None):
     """§2.1 White-POV normalisation of a verbatim STM-POV score.
 
-    The numeric part of `cp <int>` / `mate <int>` is normalised to the
-    White-POV sign (a negative STM value becomes positive for White;
-    when the mover was Black, `side="b"` negates a positive value);
-    the bound flag is kept verbatim (research A4: negate the number
-    only, never the flag). `-` (absent) stays `-`.
+    UCI `score` is side-to-move POV, so a white-mover row is ALREADY
+    White-POV — the value is returned as-is for `side="w"` and
+    `side=None` (CR-02: no sign flip for white movers, ever). Negation
+    happens ONLY when the mover was black (`side="b"`). The bound flag
+    is kept verbatim (research A4: negate the number only, never the
+    flag). `-` (absent) stays `-`.
     `side` is the mover colour ("w"/"b"); None means the caller already
     wants the raw normalisation (White-POV as-is, used in tests/fixtures).
     """
     if not score or score == "-":
         return "-"
     tokens = score.split()
-    flip = side == "b"
     out = score
     if len(tokens) >= 2 and tokens[0] in ("cp", "mate") \
             and tokens[1].lstrip("+-").lstrip("-").isdigit():
         value = int(tokens[1])
-        if flip:
-            # STM-POV black → White-POV negation.
-            value = -value
-        elif value < 0:
-            # Negative STM score already IS White-POV-negative; normalise
-            # to the White-POV sign (a minus on a white row).
+        if side == "b":
+            # STM-POV black → White-POV negation. side="w"/None returns
+            # the STM value as-is (already White-POV).
             value = -value
         out = f"{tokens[0]} {value}"
     if len(tokens) >= 3 and tokens[2] in ("lowerbound", "upperbound"):

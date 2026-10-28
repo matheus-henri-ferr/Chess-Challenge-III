@@ -15,7 +15,13 @@ Covers the plan's acceptance criteria:
   - every §4 variant fill asserted per row (search full fields, opp zeros,
     none terminal with non-empty score, ponder present);
   - bound-flag scores (`cp 35 lowerbound`, `mate 3`) round-trip verbatim
-    while score_white negates ONLY the number, flag kept verbatim (A4);
+    while score_white negates ONLY the number, flag kept verbatim (A4)
+    — negation is side="b"-only (CR-02: white-mover rows are already
+    White-POV, plan 02-05);
+  - CR-02/CR-03 regression classes (plan 02-05): ScoreWhiteSignTests
+    (white-mover negative keeps its sign) + AlternationSeedTests (a
+    valid our-color b white-first log lints clean; alternation still
+    enforced);
   - lint failure fixtures: missing key (names the key), side alternation
     break, wall_ms < engine_ms, src=banana, missing header/trailer — each
     produces a NAMED failure; the golden full-game log passes with zero
@@ -188,13 +194,15 @@ class VariantFillTests(unittest.TestCase):
         self.assertTrue(by_src["none"]["score"])
 
     def test_score_white_negates_number_keeps_flag(self):
+        # side=None = caller already wants the raw STM value as-is
+        # (White-POV-as-is); negation is side="b"-only (CR-02).
         self.assertEqual(score_white_of("cp 35"), "cp 35")
-        self.assertEqual(score_white_of("cp -35"), "cp 35")
-        self.assertEqual(score_white_of("mate -3"), "mate 3")
+        self.assertEqual(score_white_of("cp -35"), "cp -35")
+        self.assertEqual(score_white_of("mate -3"), "mate -3")
         self.assertEqual(score_white_of("cp 35 lowerbound"),
                          "cp 35 lowerbound")
         self.assertEqual(score_white_of("cp -12 upperbound"),
-                         "cp 12 upperbound")
+                         "cp -12 upperbound")
         self.assertEqual(score_white_of("-"), "-")
         # STM black with a cp score flips the sign for White's POV.
         rows = MoveLog.build([

@@ -11,8 +11,9 @@
 
 Every check is a failure with a NAMED reason:
   - all ten keys (src, the eight §2 fields, score_white) present per line;
-  - move_no monotonically non-decreasing; side alternates w/b (first
-    mover colour from the header's our-color);
+  - move_no monotonically non-decreasing; side alternates w/b seeded
+    "w" unconditionally (CR-03: white always moves first, LOGBOOK §1.4 —
+    the header's our-color is the console's colour, never the seed);
   - uci legal in the replayed position — every move is pushed through a
     fresh chess.Board from startpos, the same replay the engine got
     (T-02-12: a log that claims an impossible move fails);
@@ -48,7 +49,8 @@ _TRAILER_FIELDS = ("# result", "# final-clocks", "# log-sha256")
 
 
 def _parse_header(lines):
-    """Header dict from `# key value` lines; our-color drives alternation."""
+    """Header dict from `# key value` lines (structural reads only — the
+    alternation seed is always "w", CR-03)."""
     header = {}
     for line in lines:
         if not line.startswith("# ") or line == "# network=off":
@@ -82,8 +84,11 @@ def lint_log(path):
         if not any(line.startswith(field) for line in lines):
             failures.append(f"trailer missing {field[2:]}")
 
-    first_mover = header.get("our-color", "w")
-    expect_side = first_mover if first_mover in ("w", "b") else "w"
+    # CR-03: chess — white always moves first (LOGBOOK §1.4). `our-color`
+    # is the console's colour, never the game's first mover; the seed is
+    # "w" unconditionally so valid black-side logs (white-first rows)
+    # pass. Alternation itself stays enforced from here.
+    expect_side = "w"
 
     board = chess.Board()
     prev_move_no = None
