@@ -923,3 +923,37 @@ class _DrainSessionDouble:
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReadTimeoutWatchdogTests(unittest.TestCase):
+    """UAT test-2 finding: the 30 s read-timeout watchdog must fault ONLY
+    while a search is outstanding (OUR_SEARCH / PONDERING). Idle-family
+    silence is the engine's normal rest state — faulting there printed a
+    phantom 'ENGINE FAULT: engine read timeout' every 30 s of a healthy
+    game and regressed the FSM to IDLE."""
+
+    def test_timeout_during_search_faults(self):
+        s, t, o = make_session(our="w")
+        s.state = Session.OUR_SEARCH
+        s.on_engine_event({"type": "timeout"})
+        faults = [r for r in o["sink"] if r.get("e") == "ENGINE_FAULT"]
+        self.assertEqual(len(faults), 1, o["sink"])
+        self.assertIn("read timeout", faults[0]["reason"])
+        self.assertEqual(s.state, Session.IDLE)
+
+    def test_timeout_while_idle_is_ignored(self):
+        s, t, o = make_session(our="w")
+        s.state = Session.IDLE
+        s.on_engine_event({"type": "timeout"})
+        self.assertEqual([r for r in o["sink"] if r.get("e") == "ENGINE_FAULT"],
+                         [], "idle silence is normal — no phantom fault")
+        self.assertEqual(s.state, Session.IDLE)
+
+    def test_timeout_while_awaiting_opp_confirm_is_ignored(self):
+        s, t, o = make_session(our="w")
+        s.state = Session.AWAIT_OPP_CONFIRM
+        s.on_engine_event({"type": "timeout"})
+        self.assertEqual([r for r in o["sink"] if r.get("e") == "ENGINE_FAULT"],
+                         [], "waiting on the operator is not an engine hang")
+        self.assertEqual(s.state, Session.AWAIT_OPP_CONFIRM,
+                         "a late timeout must not regress the FSM")
