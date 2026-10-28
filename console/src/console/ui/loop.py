@@ -134,7 +134,24 @@ class OperatorLoop:
             self._quit = True
             return
         if line == "u":
-            removed = self.session.undo_last_ply()
+            try:
+                removed = self.session.undo_last_ply()
+            except Exception as exc:  # last-resort (CR-10 discipline):
+                # even a crash the session layer did not anticipate must
+                # never kill the prompt (H-1: PROTOCOL §9.2 operator
+                # realignment survives engine death AND residual faults).
+                sink = getattr(self.session, "sink", None)
+                if callable(sink):
+                    sink({"e": "ENGINE_FAULT", "reason":
+                          f"undo failed: {exc!r}",
+                          "traceback": traceback.format_exc()})
+                display_cb = getattr(self.session, "display_cb", None)
+                if callable(display_cb):
+                    display_cb(f"ENGINE FAULT: undo failed {exc!r} — "
+                               f"prompt alive, journal has the evidence")
+                self.say(f"ENGINE FAULT: undo failed ({exc!r}) — prompt "
+                         f"still alive")
+                return
             if removed is None:
                 self.say("nothing to undo")
             else:

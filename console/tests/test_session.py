@@ -829,7 +829,9 @@ class LoopUndoSurvivalTests(unittest.TestCase):
         loop.handle_line("q")
         self.assertTrue(loop._quit)
         loop.handle_line("u")
-        self.assertEqual(len(faults), 2, sink)
+        faults = [r for r in sink if r.get("e") == "ENGINE_FAULT"]
+        self.assertEqual(len(faults), 2,
+                         "the loop still routes `u` after `q` — not wedged")
 
 
 class TimingAnomalyTests(unittest.TestCase):
