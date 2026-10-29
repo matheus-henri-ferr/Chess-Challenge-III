@@ -43,6 +43,7 @@ NotImplementedError until Phase 5. Clock numbers ride through verbatim
 """
 
 import queue
+import threading
 import time
 
 from console.game.moves import Reject, announce_form, operator_move
@@ -71,6 +72,14 @@ class Session:
         self.transport = transport
         self.board = board
         self.sink = sink                # journal-shaped callable(dict) (02-03)
+        # Session-level lock: the tracer's feeder thread (main.py) pushes
+        # opponent moves while the operator loop drains engine events — two
+        # threads entering push+emit concurrently inverted the journal order
+        # (the engine's MOVE_LOGGED landed AFTER the opp's row, breaking log
+        # alternation at line 1; UAT/e2e finding, deterministic with an
+        # instant-answer engine). push_validated + its MOVE_LOGGED emit are
+        # one atomic section on both entry paths.
+        self._move_lock = threading.RLock()
         self.our_color = "w" if our_color == "w" else "b"
         self.announce_cb = announce_cb  # ANNOUNCE field writer (loop-owned)
         self.pv_cb = pv_cb              # PV display callback (loop-owned)
@@ -182,19 +191,20 @@ class Session:
                         "kind": reject.kind.value, "reason": reject.reason})
             self.display_cb(f"REJECTED {reject.kind.value}: {reject.reason}")
             return None
-        meta = self.board.push_validated(move)
-        # §4.5 fill: depth=0 nodes=0 score=- engine_ms=0, wall measured.
-        # Anchor: the last logged row's receipt (bestmove for us, or game
-        # start) — the interval the opponent actually took + entry time.
-        now = self._wall_ms_now()
-        anchor = self.last_move_wall_ms if self.last_move_wall_ms is not None \
-            else self.game_t0_ms
-        wall_ms = max(0, now - (anchor if anchor is not None else now))
-        self._emit({"e": "MOVE_LOGGED", "src": "opp", **meta,
-                    "depth": 0, "nodes": 0, "score": "-",
-                    "engine_ms": 0, "wall_ms": wall_ms, "pv": move.uci()})
-        self.last_move_wall_ms = now
-        self.state = self.OPP_TURN
+        with self._move_lock:  # push + row emit atomic vs the drain thread
+            meta = self.board.push_validated(move)
+            # §4.5 fill: depth=0 nodes=0 score=- engine_ms=0, wall measured.
+            # Anchor: the last logged row's receipt (bestmove for us, or game
+            # start) — the interval the opponent actually took + entry time.
+            now = self._wall_ms_now()
+            anchor = self.last_move_wall_ms if self.last_move_wall_ms is not None \
+                else self.game_t0_ms
+            wall_ms = max(0, now - (anchor if anchor is not None else now))
+            self._emit({"e": "MOVE_LOGGED", "src": "opp", **meta,
+                        "depth": 0, "nodes": 0, "score": "-",
+                        "engine_ms": 0, "wall_ms": wall_ms, "pv": move.uci()})
+            self.last_move_wall_ms = now
+            self.state = self.OPP_TURN
         self._start_search()  # our turn now: the engine answers
         return move
 
@@ -285,36 +295,35 @@ class Session:
             self.state = self.IDLE
             return
         # Legal: push now (the replica stays the authority), announce, log.
-        meta = self.board.push_validated(move)
+        # push + MOVE_LOGGED are one atomic section vs the feeder thread's
+        # opp push (journal order = move order — the e2e race fix).
+        with self._move_lock:
+            meta = self.board.push_validated(move)
+            engine_ms = self.last_info.get("time", 0)
+            wall_ms = 0
+            if self.search_t0_ms is not None:
+                # Floor 1: a completed search spans at least one pipe+thread
+                # round trip — below the log's 1 ms quantum. The floor keeps
+                # the §2.2 invariant writable for instant searches; a peer
+                # claiming MORE than wall (impossible timing, T-02-13) is a
+                # fault, not a crash (CR-06): journal + clamp below.
+                wall_ms = max(1, self._wall_ms_now() - self.search_t0_ms)
+            if wall_ms < engine_ms:  # CR-06: fail-journal, never fail-silent/crash
+                self._emit({"e": "ENGINE_FAULT", "reason":
+                            f"wall_ms {wall_ms} < engine_ms {engine_ms} "
+                            f"(anomalous peer timing; row clamped — REVIEW CR-06)"})
+                wall_ms = engine_ms
+            self._emit({"e": "MOVE_LOGGED", "src": "search", **meta,
+                        "depth": self.last_info.get("depth", 0),
+                        "nodes": self.last_info.get("nodes", 0),
+                        "score": self.last_info.get("score", "-"),
+                        "engine_ms": engine_ms,
+                        "wall_ms": wall_ms,
+                        "pv": self.last_info.get("pv", move.uci())})
+            self.last_move_wall_ms = self._wall_ms_now()
+            self.state = self.ANNOUNCE_PENDING
         self._announce(announce_form(move.uci()))
         self.last_announced = move
-        # wall_ms: monotonic delta from the go-write anchor (Pitfall 7);
-        # engine_ms is the wire `info time` milliseconds (§5.2). The
-        # wall_ms ≥ engine_ms invariant is asserted here at write time and
-        # re-checked fail-closed by log_lint (T-02-13).
-        engine_ms = self.last_info.get("time", 0)
-        wall_ms = 0
-        if self.search_t0_ms is not None:
-            # Floor 1: a completed search spans at least one pipe+thread
-            # round trip — below the log's 1 ms quantum. The floor keeps
-            # the §2.2 invariant writable for instant searches; a peer
-            # claiming MORE than wall (impossible timing, T-02-13) is a
-            # fault, not a crash (CR-06): journal + clamp below.
-            wall_ms = max(1, self._wall_ms_now() - self.search_t0_ms)
-        if wall_ms < engine_ms:  # CR-06: fail-journal, never fail-silent/crash
-            self._emit({"e": "ENGINE_FAULT", "reason":
-                        f"wall_ms {wall_ms} < engine_ms {engine_ms} "
-                        f"(anomalous peer timing; row clamped — REVIEW CR-06)"})
-            wall_ms = engine_ms
-        self._emit({"e": "MOVE_LOGGED", "src": "search", **meta,
-                    "depth": self.last_info.get("depth", 0),
-                    "nodes": self.last_info.get("nodes", 0),
-                    "score": self.last_info.get("score", "-"),
-                    "engine_ms": engine_ms,
-                    "wall_ms": wall_ms,
-                    "pv": self.last_info.get("pv", move.uci())})
-        self.last_move_wall_ms = self._wall_ms_now()
-        self.state = self.ANNOUNCE_PENDING
 
     # --- clock capture (PROTO-08: capture now, interpret in Phase 3) ----------
     def on_opp_clock(self, raw, parsed_ms):
