@@ -1,0 +1,19 @@
+# Binarios e artefatos de build: grandes demais para o GitHub, entregar em midia fisica
+*.exe
+*.o
+*.ii
+*.s
+*.res
+*.nnue
+stockfish/src/*.ltrans*
+
+# Ferramentas baixadas (fastchess) e estado de retomada que ele grava
+tools/
+config.json
+
+# Historico do clone original do Stockfish (sf_19, commit edb0d9db)
+stockfish/.git-upstream/
+
+__pycache__/
+*.log
+*.tmp
