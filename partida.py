@@ -257,8 +257,7 @@ def main():
                 elapsed_ms = int((time.monotonic() - t0) * 1000)
                 info = result.info
                 flush_typeahead()
-                print(f"\n>>> ANUNCIE: {result.move.uci()} <<<   pensou {elapsed_ms / 1000:.1f}s, "
-                      f"prof {info.get('depth', '?')}, aval {our_score(info, ours)}, PV {pv_text(info)}\n")
+                print(f"\n>>> ANUNCIE: {result.move.uci()} <<<   pensou {elapsed_ms / 1000:.1f}s, prof {info.get('depth', '?')}\n")
 
                 played, origin = None, "motor"
                 while played is None:
